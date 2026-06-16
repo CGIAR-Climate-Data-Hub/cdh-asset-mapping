@@ -126,15 +126,8 @@ def fig2_climate_domains(assets):
     ax.grid(axis="x", color=GREY_LIGHT, linewidth=0.8, zorder=0)
     ax.set_axisbelow(True)
 
-    n_unspec = sum(1 for a in assets if a["domain_norm"] == "Not specified")
-    if n_unspec:
-        ax.annotate(f"Note: {n_unspec} asset(s) with unspecified domain excluded",
-                    xy=(0.98, 0.02), xycoords="axes fraction", ha="right",
-                    fontsize=7.5, color="#888888", style="italic")
-    ax.annotate("Domain definitions: Section 3.1",
-                xy=(0.98, 0.06), xycoords="axes fraction", ha="right",
-                fontsize=7.5, color="#888888", style="italic")
-    fig.tight_layout(rect=[0, 0, 1, 0.95])
+    # Notes (exclusions, domain definitions) live in the report caption, not the plot.
+    fig.tight_layout(rect=[0, 0, 1, 0.97])
     savefig(fig, "fig2_climate_domains.png")
 
 
@@ -189,12 +182,8 @@ def fig4_geographic_coverage(assets):
     ax.grid(axis="x", color=GREY_LIGHT, linewidth=0.8, zorder=0)
     ax.set_axisbelow(True)
 
-    n_unspec = sum(1 for a in assets if a["geo_norm"] == "Not specified")
-    if n_unspec:
-        ax.annotate(f"Note: {n_unspec} asset(s) with unspecified coverage excluded",
-                    xy=(0.98, 0.02), xycoords="axes fraction", ha="right",
-                    fontsize=7.5, color="#888888", style="italic")
-    fig.tight_layout(rect=[0, 0, 1, 0.95])
+    # Exclusion note lives in the report caption, not the plot.
+    fig.tight_layout(rect=[0, 0, 1, 0.97])
     savefig(fig, "fig4_geographic_coverage.png")
 
 
@@ -267,15 +256,8 @@ def fig5_heatmap(assets):
     for spine in ax.spines.values():
         spine.set_visible(False)
 
-    # Footnote for hybrid/multi-label assets excluded from heatmap
-    n_excluded = sum(1 for a in assets if a["domain_norm"] not in HEATMAP_DOMAINS
-                     and a["domain_norm"] != "Not specified")
-    if n_excluded:
-        fig.text(0.5, 0.01,
-                 f"Note: {n_excluded} asset(s) with hybrid domain labels "
-                 f"(e.g. Sensitivity / Adaptation Analytics) excluded from heatmap.",
-                 ha="center", fontsize=7.5, color="#888888", style="italic")
-    fig.tight_layout(rect=[0, 0.04, 1, 0.96])
+    # Exclusion note lives in the report caption, not the plot.
+    fig.tight_layout()
     savefig(fig, "fig5_heatmap_centre_domain.png")
 
 
@@ -297,29 +279,28 @@ def fig6_gap_matrix(assets):
         if d in DOMAINS and g in GEOS:
             matrix[DOMAINS.index(d), GEOS.index(g)] += 1
 
-    cell = 0.82
-    fig, ax = plt.subplots(figsize=(cell * len(GEOS) + 3.2,
-                                    cell * len(DOMAINS) + 1.4))
+    # Compact rectangular cells (aspect="auto") keep the matrix from dominating
+    # the page; notes live in the report caption.
+    fig, ax = plt.subplots(figsize=(8.6, 3.9))
     from matplotlib.colors import LinearSegmentedColormap
     cmap = LinearSegmentedColormap.from_list(
         "cdh_blue", ["#FFFFFF", PROGRAM_BLUE_LT, PROGRAM_BLUE])
-    im = ax.imshow(matrix, aspect="equal", cmap=cmap,
+    im = ax.imshow(matrix, aspect="auto", cmap=cmap,
                    vmin=0, vmax=max(matrix.max(), 1))
 
     for ri in range(len(DOMAINS)):
         for ci in range(len(GEOS)):
             v = matrix[ri, ci]
             if v == 0:
-                # Flag genuine gaps with a hollow marker.
                 ax.text(ci, ri, "·", ha="center", va="center",
-                        fontsize=14, color="#C9492F")
+                        fontsize=13, color="#C9492F")
             else:
                 col = "white" if v >= matrix.max() * 0.6 else CGIAR_GREEN
                 ax.text(ci, ri, str(v), ha="center", va="center",
                         fontsize=9, color=col, fontweight="bold")
 
     ax.set_xticks(range(len(GEOS)))
-    ax.set_xticklabels(GEOS, rotation=35, ha="left", fontsize=8)
+    ax.set_xticklabels(GEOS, rotation=20, ha="left", fontsize=8)
     ax.xaxis.set_ticks_position("top")
     ax.xaxis.set_label_position("top")
     ax.set_yticks(range(len(DOMAINS)))
@@ -330,12 +311,7 @@ def fig6_gap_matrix(assets):
     ax.tick_params(which="both", length=0)
     for spine in ax.spines.values():
         spine.set_visible(False)
-    n_excl = sum(1 for a in assets if a["domain_norm"] not in DOMAINS
-                 or a["geo_norm"] not in GEOS)
-    fig.text(0.5, 0.01, f"Red dot = no asset (coverage gap). "
-             f"{n_excl} asset(s) with hybrid domain / unspecified geography excluded.",
-             ha="center", fontsize=7.5, color="#888888", style="italic")
-    fig.tight_layout(rect=[0, 0.04, 1, 0.94])
+    fig.tight_layout()
     savefig(fig, "fig6_gap_matrix.png")
 
 
@@ -353,12 +329,14 @@ def fig7_priority_quadrant(assets):
         x, y = sc.get("technical_readiness"), sc.get("reuse_potential")
         if x is None or y is None:
             continue
-        dr = sc.get("decision_relevance") or 0.5
         acc = a.get("access_norm", "Unknown")
-        # Jitter discrete ordinal values so points separate.
-        jx = x + rng.normal(0, 0.02)
-        jy = y + rng.normal(0, 0.02)
-        ax.scatter(jx, jy, s=40 + dr * 320, alpha=0.6,
+        # Jitter discrete ordinal values so overlapping points separate.
+        jx = x + rng.normal(0, 0.025)
+        jy = y + rng.normal(0, 0.025)
+        # Uniform marker size: position (readiness × reuse) and colour (access)
+        # carry the signal. Decision relevance is near-constant ("High" for most
+        # assets), so encoding it as size added clutter, not information.
+        ax.scatter(jx, jy, s=90, alpha=0.6,
                    color=access_col.get(acc, GREY_MED),
                    edgecolor="white", linewidth=0.6,
                    label=acc if not plotted[acc] else None, zorder=3)
@@ -380,9 +358,7 @@ def fig7_priority_quadrant(assets):
     leg = ax.legend(title="Access", loc="lower right", fontsize=8,
                     frameon=True, framealpha=0.9)
     leg.get_title().set_fontsize(8.5)
-    ax.annotate("Bubble size = decision relevance", xy=(0.13, 0.13),
-                fontsize=7.5, color="#888888", style="italic")
-    fig.tight_layout(rect=[0, 0, 1, 0.95])
+    fig.tight_layout()
     savefig(fig, "fig7_priority_quadrant.png")
 
 
@@ -414,10 +390,7 @@ def fig8_integration_pathway(assets):
     ax.spines[["top", "right", "left"]].set_visible(False)
     ax.grid(axis="x", color=GREY_LIGHT, linewidth=0.8, zorder=0)
     ax.set_axisbelow(True)
-    ax.annotate("Heuristic from access status + file format — advisory, verify per asset.",
-                xy=(0.98, -0.22), xycoords="axes fraction", ha="right",
-                fontsize=7.5, color="#888888", style="italic")
-    fig.tight_layout(rect=[0, 0, 1, 0.95])
+    fig.tight_layout()
     savefig(fig, "fig8_integration_pathway.png")
 
 

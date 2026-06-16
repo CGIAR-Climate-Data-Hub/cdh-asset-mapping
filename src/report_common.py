@@ -154,6 +154,28 @@ def compute_stats(assets, ml):
                           if a.get("national_relevance") in ("High", "Very High"))
     n_cross_program = sum(1 for a in assets if a.get("cgiar_programs"))
 
+    # Sheet D / E narrative signals (keyword presence over free-text fields).
+    def kw_share(field, terms):
+        out = {}
+        for label, kw in terms.items():
+            out[label] = sum(1 for a in assets
+                             if a.get(field) and kw in str(a[field]).lower())
+        return out
+
+    use_kw = kw_share("primary_use_case", {
+        "Policy": "polic", "Advisory": "advisor", "Modelling": "model",
+        "Investment": "invest", "Research": "research", "Monitoring": "monitor"})
+    user_kw = kw_share("user_groups", {
+        "Researchers": "research", "Governments": "govern", "Donors": "donor",
+        "Private sector": "privat", "Communities/farmers": "farmer"})
+    commodity_kw = kw_share("commodity", {
+        "Rice": "rice", "Maize": "maize", "Wheat": "wheat", "Potato/sweetpotato": "potato",
+        "Fish/aquatic": "fish", "Livestock": "livestock", "Cassava": "cassava"})
+    farming_kw = kw_share("farming_system", {
+        "Cropping": "crop", "Livestock": "livestock", "Mixed": "mixed",
+        "Aquatic": "aqua", "Agroforestry": "agrofor", "Rice-based": "rice"})
+    n_output = sum(1 for a in assets if a.get("output_variable_type"))
+
     return {
         "total": total,
         "raw_total": raw_total,
@@ -191,6 +213,11 @@ def compute_stats(assets, ml):
         "n_cross_program": n_cross_program,
         "dup_rank_centres": dup_rank_centres,
         "unranked_centres": unranked_centres,
+        "use_kw": use_kw,
+        "user_kw": user_kw,
+        "commodity_kw": commodity_kw,
+        "farming_kw": farming_kw,
+        "n_output": n_output,
     }
 
 
@@ -211,6 +238,10 @@ def build_report_body(assets, s, figures_prefix="figures"):
         why = (a.get("justification") or a.get("primary_use_case")
                or a.get("short_description") or "")
         return why.replace("|", "\\|").replace("\n", " ")[:n]
+
+    def topkw(d, n=3):
+        items = [(k, v) for k, v in sorted(d.items(), key=lambda x: -x[1]) if v]
+        return ", ".join(f"**{k}** ({v})" for k, v in items[:n]) or "—"
 
     W(f"## Executive Summary")
     W(f"")
@@ -602,6 +633,49 @@ def build_report_body(assets, s, figures_prefix="figures"):
     )
     W(f"")
 
+    W(f"### 4.6 What the assets measure, and who uses them")
+    W(f"")
+    W(
+        f"Counts alone understate what was captured. The submissions also describe what each asset "
+        f"actually produces (template Sheet D — Thematic) and how it is used in practice (Sheet E — "
+        f"Context & Use). That detail is what turns an inventory into a basis for reuse, and it "
+        f"sharpens the picture of where the portfolio's real value sits."
+    )
+    W(f"")
+    W(
+        f"**What they measure.** **{s['n_output']} of {s['total']}** assets specify an output "
+        f"variable type, spanning raw climate variables and hazard indices, biophysical outputs "
+        f"(crop yields, biomass, soil moisture), greenhouse-gas emissions, and suitability or "
+        f"classification layers. The commodity focus tracks CGIAR's mandate crops — led by "
+        f"{topkw(s['commodity_kw'])} — while farming systems are dominated by "
+        f"{topkw(s['farming_kw'])}. The recurring upstream climate inputs in "
+        f"Section 6.7 show how many of these outputs are, in turn, built on a small shared set of "
+        f"sources, which is exactly where the Hub can remove duplicated effort."
+    )
+    W(f"")
+    W(
+        f"**How they are used.** Submitters most often describe their assets serving "
+        f"{topkw(s['use_kw'])} purposes — confirming a portfolio that skews decisively toward "
+        f"decision support rather than purely academic output. The user communities named most "
+        f"frequently are {topkw(s['user_kw'])}. Most tellingly for the Hub's reuse mandate, "
+        f"**{s['n_cross_program']} assets** already name the CGIAR programmes using them, "
+        f"**{s['n_high_national']}** are rated high or very-high national relevance (the datasets "
+        f"that underpin country engagement and policy dialogue), and **{s['foundational_count']}** "
+        f"are flagged as foundational to ongoing work — assets whose withdrawal would break "
+        f"existing pipelines."
+    )
+    W(f"")
+    W(
+        f"Two implications follow. First, the portfolio's value is concentrated in a relatively "
+        f"small core of foundational, multi-programme, nationally-relevant datasets; these are the "
+        f"natural anchors for Phase 1, ahead of more peripheral or single-use submissions. Second, "
+        f"the strong policy, advisory, and modelling orientation means the Hub's task is less to "
+        f"surface new science than to make assets that are *already relied upon* discoverable, "
+        f"interoperable, and durable — reducing the risk that critical datasets remain locked to "
+        f"the teams that happen to maintain them today."
+    )
+    W(f"")
+
     W(f"---")
     W(f"")
     W(f"## 5. Strength and Gap Analysis")
@@ -615,12 +689,19 @@ def build_report_body(assets, s, figures_prefix="figures"):
     W(f"### 5.1 Domain × geography coverage")
     W(f"")
     W(
-        f"![**Figure 6. Domain × geography coverage matrix.** Asset counts for every climate-domain "
-        f"(rows) by geography (columns) combination across the whole portfolio. Darker blue means "
-        f"deeper coverage; a red dot marks a true gap with no assets. The fully empty Adaptive "
-        f"Capacity row and the sparse Latin America & Caribbean and Multi-regional columns are the "
-        f"clearest gaps. Hybrid-domain and unspecified-geography assets are "
-        f"excluded.]({fig('fig6_gap_matrix.png', 'Figure 6')})"
+        f"![**Figure 6. Where coverage is deep, thin, or absent (climate domain × geography).** Each "
+        f"cell counts the assets in one domain (row) and geography (column); darker blue = more "
+        f"assets, a red dot = a true gap with none. Read across a row to see where a domain is "
+        f"covered, and down a column to see a region's spread. Two patterns stand out: coverage "
+        f"concentrates heavily in Africa and Global, and **Adaptive Capacity is empty across every "
+        f"region** while **Latin America & Caribbean** and **Multi-regional** are thin throughout — "
+        f"the clearest targets for the next cycle. Hybrid-domain and unspecified-geography assets "
+        f"are excluded for legibility.]({fig('fig6_gap_matrix.png', 'Figure 6')})"
+    )
+    W(f"")
+    W(
+        f"*An interactive version of this matrix — with per-cell hover counts and click-to-filter "
+        f"into the asset list — is in the dashboard linked at the top of this report.*"
     )
     W(f"")
     dg = s["domain_geo"]
@@ -782,14 +863,21 @@ def build_report_body(assets, s, figures_prefix="figures"):
     W(f"### 6.3 Priority quadrant")
     W(f"")
     W(
-        f"![**Figure 7. Priority quadrant.** Each bubble is an asset placed by its submitter-rated "
-        f"technical readiness (x-axis) and reuse potential (y-axis). Bubble size reflects decision "
-        f"relevance; colour reflects access status (green = Open, orange = Restricted, grey = "
-        f"Unknown). The shaded top-right zone holds the natural 'quick wins' — assets that are both "
-        f"ready and broadly reusable. Reuse potential and access are independent criteria: an asset "
-        f"can be highly reusable in content yet currently access-restricted, so high-reuse Restricted "
-        f"(orange, upper) assets are not a contradiction — they are the prime candidates for an "
-        f"access negotiation to unlock that value.]({fig('fig7_priority_quadrant.png', 'Figure 7')})"
+        f"![**Figure 7. Priority quadrant.** Each point is an asset placed by its submitter-rated "
+        f"technical readiness (x-axis) and reuse potential (y-axis); colour shows access status "
+        f"(green = Open, orange = Restricted, grey = Unknown). Markers are a uniform size — almost "
+        f"every asset is rated 'High' decision relevance, so sizing by it added clutter rather than "
+        f"information. The shaded top-right zone holds the natural 'quick wins' — assets that are "
+        f"both ready and broadly reusable. Reuse potential and access are independent criteria: an "
+        f"asset can be highly reusable in content yet currently access-restricted, so high-reuse "
+        f"Restricted (orange, upper) points are not a contradiction — they are the prime candidates "
+        f"for an access negotiation to unlock that value.]({fig('fig7_priority_quadrant.png', 'Figure 7')})"
+    )
+    W(f"")
+    W(
+        f"*The interactive dashboard (linked at the top of this report) renders this quadrant — and "
+        f"the coverage matrix in Figure 6 — with hover tooltips and click-through to each asset's "
+        f"full record.*"
     )
     W(f"")
     W(
