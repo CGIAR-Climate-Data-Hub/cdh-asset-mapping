@@ -138,6 +138,16 @@ def compute_stats(assets, ml):
             input_counts[i] += 1
     shared_inputs = {i: n for i, n in input_counts.items() if n >= 2}
 
+    # Rank data-quality: centres with duplicate/tied ranks or none at all.
+    dup_rank_centres, unranked_centres = [], []
+    for c in centre_counts:
+        rs = [a["asset_rank_num"] for a in assets
+              if a["centre"] == c and a.get("asset_rank_num")]
+        if not rs:
+            unranked_centres.append(c)
+        elif len(rs) != len(set(rs)):
+            dup_rank_centres.append(c)
+
     national_counts = Counter(a.get("national_relevance") for a in assets
                               if a.get("national_relevance"))
     n_high_national = sum(1 for a in assets
@@ -179,6 +189,8 @@ def compute_stats(assets, ml):
         "national_counts": national_counts,
         "n_high_national": n_high_national,
         "n_cross_program": n_cross_program,
+        "dup_rank_centres": dup_rank_centres,
+        "unranked_centres": unranked_centres,
     }
 
 
@@ -188,6 +200,17 @@ def build_report_body(assets, s, figures_prefix="figures"):
 
     def fig(name, alt):
         return f"{figures_prefix}/{name}" if figures_prefix else name
+
+    def linked(a, n=60):
+        """Asset name as a markdown link to its data URL when available."""
+        nm = (a["name"] or "")[:n].replace("|", "\\|")
+        url = a.get("url")
+        return f"[{nm}]({url})" if url else nm
+
+    def short_why(a, n=160):
+        why = (a.get("justification") or a.get("primary_use_case")
+               or a.get("short_description") or "")
+        return why.replace("|", "\\|").replace("\n", " ")[:n]
 
     W(f"## Executive Summary")
     W(f"")
@@ -288,6 +311,14 @@ def build_report_body(assets, s, figures_prefix="figures"):
     W(f"")
     W(f"Submissions were received from {s['n_centres']} centres.")
     W(f"")
+    W(
+        f"The blank template, full submission guidelines, and every centre's completed Excel "
+        f"workbook are version-controlled in the project repository: the raw submissions are at "
+        f"[`data/submissions/`](https://github.com/CGIAR-Climate-Data-Hub/cdh-asset-mapping/tree/main/data/submissions) "
+        f"and the mapping strategy and template instructions at "
+        f"[`docs/CDH-Asset-Mapping-Strategy.docx`](https://github.com/CGIAR-Climate-Data-Hub/cdh-asset-mapping/blob/main/docs/CDH-Asset-Mapping-Strategy.docx)."
+    )
+    W(f"")
     W(f"### 2.2 Normalisation")
     W(f"")
     W(
@@ -325,6 +356,41 @@ def build_report_body(assets, s, figures_prefix="figures"):
     W(f"python src/ingest.py && python src/figures.py && python src/report.py")
     W(f"quarto render report.qmd --to html")
     W(f"```")
+    W(f"")
+
+    W(f"### 2.5 Optional composite priority score")
+    W(f"")
+    W(
+        f"The mapping strategy deliberately avoids reducing the five qualitative criteria to a "
+        f"single rank (Section 6.1). For navigation only — to help sort long lists in the report "
+        f"and dashboard — a transparent **composite score (0–100)** is nonetheless computed. It is "
+        f"defined once in `src/ingest.py` and shared verbatim with the dashboard, so the two never "
+        f"diverge. It is **not** an official ranking; the authoritative signal remains each centre's "
+        f"own top-three nomination."
+    )
+    W(f"")
+    W(f"Each component is mapped to a 0–1 sub-score, then combined as a weighted average:")
+    W(f"")
+    W(f"- **Ordinal criteria** (Decision Relevance, Technical Readiness, Reuse Potential, Contemporary Validity, Sustainability) map Very High = 1.0, High = 0.85, Medium-High = 0.75, Medium = 0.5, Medium-Low = 0.35, Low = 0.25.")
+    W(f"- **Submitted rank** maps to a *centre-relative* sub-score `(max_rank_in_centre − rank + 1) / max_rank_in_centre`, so rank 1 scores highest within each centre regardless of how many assets that centre ranked.")
+    W(f"- **Intended Hub role** maps Hub-native = 1.0, Derived = 0.8, Federation = 0.7, Reference/Operational = 0.6; unspecified is omitted.")
+    W(f"")
+    W(f"| Component | Weight |")
+    W(f"|---|---|")
+    W(f"| Decision relevance | 0.20 |")
+    W(f"| Technical readiness | 0.20 |")
+    W(f"| Reuse potential | 0.15 |")
+    W(f"| Submitted rank (within centre) | 0.15 |")
+    W(f"| Contemporary validity | 0.10 |")
+    W(f"| Sustainability | 0.10 |")
+    W(f"| Intended Hub role specified | 0.10 |")
+    W(f"")
+    W(
+        f"The score is the weighted mean of **only the components that are present**: a missing "
+        f"criterion is dropped from both numerator and denominator rather than scored as zero, so "
+        f"incomplete submissions are not unfairly penalised (they simply rest on less evidence). "
+        f"The portfolio mean is **{s['mean_score']}**."
+    )
     W(f"")
 
     W(f"---")
@@ -392,7 +458,12 @@ def build_report_body(assets, s, figures_prefix="figures"):
         f"(see Section 2.3 and Annex C)."
     )
     W(f"")
-    W(f"![Figure 1 — Assets per centre]({fig('fig1_assets_per_centre.png', 'Figure 1')})")
+    W(
+        f"![**Figure 1. Assets submitted per centre.** Number of catalogued assets contributed "
+        f"by each centre after consolidation (Section 2.3). Dark bars are the six Hub-funded "
+        f"centres; light bars are non-Hub-funded centres. Bar length is the asset count; centres "
+        f"are ordered largest to smallest.]({fig('fig1_assets_per_centre.png', 'Figure 1')})"
+    )
     W(f"")
     W(f"| Centre | Assets | Hub-funded |")
     W(f"|---|---|---|")
@@ -406,10 +477,24 @@ def build_report_body(assets, s, figures_prefix="figures"):
         f"of portfolio."
     )
     W(f"")
+    W(
+        f"**Coverage caveat — centres not yet represented.** Submissions were received from "
+        f"{s['n_centres']} centres. **CIMMYT** and **ICARDA** had not submitted at the time of "
+        f"this build and are therefore absent from all totals and figures below; their inclusion "
+        f"will materially change domain and geographic coverage (CIMMYT in particular for "
+        f"South Asian wheat/maize systems and adaptation analytics — see the box in Section 5.4). "
+        f"Targeted follow-up with both centres is underway."
+    )
+    W(f"")
 
     W(f"### 4.2 Domain distribution")
     W(f"")
-    W(f"![Figure 2 — Domain distribution]({fig('fig2_climate_domains.png', 'Figure 2')})")
+    W(
+        f"![**Figure 2. Distribution by climate domain.** Number of assets in each normalised "
+        f"climate domain (definitions in Section 3); assets with no specified domain are excluded. "
+        f"Adaptation Analytics and Hazard are the largest domains, while Adaptive Capacity and "
+        f"Climate Policy / Finance are the thinnest.]({fig('fig2_climate_domains.png', 'Figure 2')})"
+    )
     W(f"")
 
     top2 = s["domain_counts"].most_common(2)
@@ -431,7 +516,12 @@ def build_report_body(assets, s, figures_prefix="figures"):
 
     W(f"#### Cross-centre domain coverage")
     W(f"")
-    W(f"![Figure 5 — Centre × domain heatmap]({fig('fig5_heatmap_centre_domain.png', 'Figure 5')})")
+    W(
+        f"![**Figure 5. Centre × domain heatmap.** Number of assets each centre holds in each "
+        f"single-label climate domain. Darker cells hold more assets; blank cells mean none. "
+        f"Hybrid-domain assets (e.g. Sensitivity / Adaptation Analytics) are excluded here for "
+        f"readability but are counted in Figure 2.]({fig('fig5_heatmap_centre_domain.png', 'Figure 5')})"
+    )
     W(f"")
     W(
         f"Heatmap shows number of assets per centre per domain. Hybrid domain labels "
@@ -442,7 +532,12 @@ def build_report_body(assets, s, figures_prefix="figures"):
 
     W(f"### 4.3 Ownership and asset type")
     W(f"")
-    W(f"![Figure 3 — Asset types]({fig('fig3_asset_types.png', 'Figure 3')})")
+    W(
+        f"![**Figure 3. Asset type (ownership).** Share of catalogued assets by ownership class: "
+        f"CGIAR-produced, co-produced with partners, or external datasets adopted into CGIAR "
+        f"workflows. Bars show counts with the percentage of the portfolio in "
+        f"parentheses.]({fig('fig3_asset_types.png', 'Figure 3')})"
+    )
     W(f"")
     cgiar_n = s["type_counts"].get("CGIAR-produced", 0)
     ext_n = s["type_counts"].get("External", 0)
@@ -458,7 +553,12 @@ def build_report_body(assets, s, figures_prefix="figures"):
 
     W(f"### 4.4 Geographic coverage")
     W(f"")
-    W(f"![Figure 4 — Geographic coverage]({fig('fig4_geographic_coverage.png', 'Figure 4')})")
+    W(
+        f"![**Figure 4. Geographic coverage.** Number of assets per geographic grouping; assets "
+        f"with no specified coverage are excluded. Africa and Global dominate, while Latin America "
+        f"& Caribbean, Asia, and Multi-regional are comparatively "
+        f"thin.]({fig('fig4_geographic_coverage.png', 'Figure 4')})"
+    )
     W(f"")
     africa_n = s["geo_counts"].get("Africa", 0)
     global_n = s["geo_counts"].get("Global", 0)
@@ -514,7 +614,14 @@ def build_report_body(assets, s, figures_prefix="figures"):
     W(f"")
     W(f"### 5.1 Domain × geography coverage")
     W(f"")
-    W(f"![Figure 6 — Domain × geography coverage matrix]({fig('fig6_gap_matrix.png', 'Figure 6')})")
+    W(
+        f"![**Figure 6. Domain × geography coverage matrix.** Asset counts for every climate-domain "
+        f"(rows) by geography (columns) combination across the whole portfolio. Darker blue means "
+        f"deeper coverage; a red dot marks a true gap with no assets. The fully empty Adaptive "
+        f"Capacity row and the sparse Latin America & Caribbean and Multi-regional columns are the "
+        f"clearest gaps. Hybrid-domain and unspecified-geography assets are "
+        f"excluded.]({fig('fig6_gap_matrix.png', 'Figure 6')})"
+    )
     W(f"")
     dg = s["domain_geo"]
     CANON = [
@@ -579,6 +686,31 @@ def build_report_body(assets, s, figures_prefix="figures"):
         tag = "Yes" if c in HUB_FUNDED else "No"
         W(f"| {centre_label(c)} | {st['n']} | {st['mean_score']} | {len(st['domains'])} | {tag} |")
     W(f"")
+    W(f"*Table — Per-centre strength profile (mean priority is the optional composite of Section 6.1).*")
+    W(f"")
+
+    W(f"### 5.4 Notable assets outside this mapping")
+    W(f"")
+    W(
+        f"Two strategically important assets are intentionally **not** ranked in the analysis "
+        f"above, and should be read alongside it:"
+    )
+    W(f"")
+    W(
+        f"> **AAA Atlas (CGIAR Adaptation Atlas).** Already planned for integration into the "
+        f"Climate Data Hub from the outset, the AAA Atlas has been **deliberately excluded** from "
+        f"the nomination ranking so that other centre assets can surface on their own merit. Its "
+        f"inclusion in the Hub is assumed, not contingent on this exercise."
+    )
+    W(f"")
+    W(
+        f"> **South Asia Adaptation Atlas (ACASA).** Developed by CIMMYT / BISA "
+        f"(<https://acasa-bisa.org/>), ACASA is a major adaptation-analytics resource for South "
+        f"Asian food systems. CIMMYT has not yet submitted to this mapping, so ACASA does not "
+        f"appear in any totals or figures; it is flagged here as a high-priority asset to capture "
+        f"once CIMMYT engages."
+    )
+    W(f"")
 
     W(f"---")
     W(f"")
@@ -613,39 +745,72 @@ def build_report_body(assets, s, figures_prefix="figures"):
     W(f"### 6.2 Strategic nominations — each centre's top three")
     W(f"")
     W(
-        f"**{len(s['strategic'])} assets** were ranked in their centre's top three. Under the "
-        f"mapping strategy these are the unit for **immediate Hub inclusion or federation**; "
-        f"lower-ranked assets are candidates for later cycles. Each top-ranked asset carries a "
-        f"centre-written justification (summarised below; full text in the asset record)."
+        f"The **{len(s['strategic'])} assets** below are each centre's three best-ranked "
+        f"submissions. Under the mapping strategy these are the unit for **immediate Hub "
+        f"inclusion or federation**; lower-ranked assets are candidates for later cycles. Each "
+        f"carries a centre-written justification (summarised below; full text in the asset record)."
     )
-    W(f"")
-    W(f"| Centre | Rank | Asset | Domain | Access | Pathway | Centre justification |")
-    W(f"|---|---|---|---|---|---|---|")
-    for a in s["strategic"]:
-        name = a["name"].replace("|", "\\|")[:42]
-        why = (a.get("justification") or a.get("primary_use_case") or "").replace("|", "\\|").replace("\n", " ")[:90]
-        W(
-            f"| {centre_label(a['centre'])} | {a.get('asset_rank') or '—'} | {name} | "
-            f"{a['domain_norm']} | {a.get('access_norm', '—')} | {a.get('integration_hint', '—')} | {why} |"
+    notes = []
+    if s["dup_rank_centres"]:
+        notes.append(
+            f"{len(s['dup_rank_centres'])} centre(s) "
+            f"({', '.join(centre_label(c) for c in sorted(s['dup_rank_centres']))}) submitted "
+            f"tied/duplicate ranks, so their nominations are capped at the three lowest-ranked "
+            f"assets (ties broken by name)"
         )
+    if s["unranked_centres"]:
+        notes.append(
+            f"{', '.join(centre_label(c) for c in sorted(s['unranked_centres']))} submitted no "
+            f"ranks and so contribute no nominations"
+        )
+    notes.append("a centre with fewer than three ranked assets shows fewer")
+    if notes:
+        W(f"")
+        W(f"*Data-quality note: {'; '.join(notes)}. To be corrected with centres next cycle.*")
+    W(f"")
+    W(f"| Centre | Rank | Asset | Domain | Access | Centre justification |")
+    W(f"|---|---|---|---|---|---|")
+    for a in s["strategic"]:
+        W(
+            f"| {centre_label(a['centre'])} | {a.get('asset_rank') or '—'} | {linked(a)} | "
+            f"{a['domain_norm']} | {a.get('access_norm', '—')} | {short_why(a)} |"
+        )
+    W(f"")
+    W(f"*Table 1 — Strategic nominations: each centre's top-ranked assets. Asset names link to the data source where a URL was provided.*")
     W(f"")
 
     W(f"### 6.3 Priority quadrant")
     W(f"")
-    W(f"![Figure 7 — Priority quadrant]({fig('fig7_priority_quadrant.png', 'Figure 7')})")
+    W(
+        f"![**Figure 7. Priority quadrant.** Each bubble is an asset placed by its submitter-rated "
+        f"technical readiness (x-axis) and reuse potential (y-axis). Bubble size reflects decision "
+        f"relevance; colour reflects access status (green = Open, orange = Restricted, grey = "
+        f"Unknown). The shaded top-right zone holds the natural 'quick wins' — assets that are both "
+        f"ready and broadly reusable. Reuse potential and access are independent criteria: an asset "
+        f"can be highly reusable in content yet currently access-restricted, so high-reuse Restricted "
+        f"(orange, upper) assets are not a contradiction — they are the prime candidates for an "
+        f"access negotiation to unlock that value.]({fig('fig7_priority_quadrant.png', 'Figure 7')})"
+    )
     W(f"")
     W(
-        f"Assets in the top-right quadrant (high technical readiness **and** high reuse "
-        f"potential) are the natural quick wins. Bubble size reflects decision relevance and "
-        f"colour reflects access status — **green (Open)** assets in the top-right are the "
-        f"fastest to act on; **orange (Restricted)** assets of equal value require an access "
-        f"conversation first."
+        f"Why are several **Restricted** assets rated **high reuse**? The two are measured "
+        f"independently. *Reuse potential* is the submitter's judgement of how broadly the asset's "
+        f"**content** could serve other programmes, countries, or analyses; *access status* is "
+        f"whether it can be **obtained** today under current licensing or permissions. A dataset can "
+        f"be scientifically reusable while still gated — these are exactly the assets where a short "
+        f"access conversation converts latent value into usable value (see Section 6.6)."
     )
     W(f"")
 
     W(f"### 6.4 Suggested integration pathway")
     W(f"")
-    W(f"![Figure 8 — Suggested integration pathway]({fig('fig8_integration_pathway.png', 'Figure 8')})")
+    W(
+        f"![**Figure 8. Suggested integration pathway.** Each asset is classified by a heuristic "
+        f"combining its access status and file format into a starting pathway: federate (ready, or "
+        f"with light ingest), ingest candidate, negotiate access, or assess. Bars show counts and "
+        f"the share of the portfolio. The classification is advisory and should be verified per "
+        f"asset before committing.]({fig('fig8_integration_pathway.png', 'Figure 8')})"
+    )
     W(f"")
     ic = s["integration_counts"]
     W(
@@ -667,11 +832,7 @@ def build_report_body(assets, s, figures_prefix="figures"):
     W(f"")
 
     def action_row(a):
-        name = a["name"].replace("|", "\\|")[:48]
-        why = (a.get("justification") or a.get("primary_use_case")
-               or a.get("short_description") or "")
-        why = why.replace("|", "\\|").replace("\n", " ")[:80]
-        return name, why
+        return linked(a), short_why(a)
 
     W(f"### 6.5 Act now — ready, open, high value")
     W(f"")
@@ -682,14 +843,16 @@ def build_report_body(assets, s, figures_prefix="figures"):
         f"ingestion (top {min(len(inow), 15)} shown):"
     )
     W(f"")
-    W(f"| Score | Centre | Asset | Domain | Pathway | Rationale |")
-    W(f"|---|---|---|---|---|---|")
+    W(f"| Centre | Asset | Domain | Pathway | Rationale |")
+    W(f"|---|---|---|---|---|")
     for a in inow[:15]:
         name, why = action_row(a)
         W(
-            f"| {a['priority_score']} | {centre_label(a['centre'])} | {name} | "
+            f"| {centre_label(a['centre'])} | {name} | "
             f"{a['domain_norm']} | {a.get('integration_hint', '')} | {why} |"
         )
+    W(f"")
+    W(f"*Table 2 — 'Act now' shortlist: Open-access, high-readiness assets. Asset names link to the data source.*")
     W(f"")
 
     W(f"### 6.6 Next cycle — high value, currently blocked")
@@ -701,17 +864,18 @@ def build_report_body(assets, s, figures_prefix="figures"):
         f"investment before the next mapping cycle (top {min(len(nxt), 12)} shown):"
     )
     W(f"")
-    W(f"| Score | Centre | Asset | Domain | Blocker | Pathway |")
-    W(f"|---|---|---|---|---|---|")
+    W(f"| Centre | Asset | Domain | Blocker | Rationale |")
+    W(f"|---|---|---|---|---|")
     for a in nxt[:12]:
-        name, _ = action_row(a)
-        rd_sc = a.get("score_components", {}).get("technical_readiness")
+        name, why = action_row(a)
         blocker = ("Restricted access" if a.get("access_norm") == "Restricted"
                    else "Readiness below High")
         W(
-            f"| {a['priority_score']} | {centre_label(a['centre'])} | {name} | "
-            f"{a['domain_norm']} | {blocker} | {a.get('integration_hint', '')} |"
+            f"| {centre_label(a['centre'])} | {name} | "
+            f"{a['domain_norm']} | {blocker} | {why} |"
         )
+    W(f"")
+    W(f"*Table 3 — 'Next cycle' queue: high-value assets blocked by access or readiness. Asset names link to the data source.*")
     W(f"")
 
     W(f"### 6.7 Shared dependencies and reuse signals")
@@ -759,30 +923,84 @@ def build_report_body(assets, s, figures_prefix="figures"):
     W(f"### 7.1 Coverage and gaps")
     W(f"")
     W(
-        f"Mapping captures substantial portion of CGIAR's climate data portfolio, but is not "
-        f"exhaustive. ICARDA has not yet submitted; their inclusion will affect totals."
+        f"This mapping captures a substantial and decision-relevant slice of CGIAR's climate data "
+        f"portfolio, but by design it is neither exhaustive nor a complete census. The picture it "
+        f"paints should be read as *what the engaged centres consider their strongest assets*, not "
+        f"the full universe of CGIAR climate data. Two coverage caveats matter most when "
+        f"interpreting the gaps below."
     )
     W(f"")
     W(
-        f"Thematic gaps visible in current inventory include: limited **Adaptive Capacity** "
-        f"assets ({s['domain_counts'].get('Adaptive Capacity', 0)} assets), relatively few "
-        f"**Mitigation** datasets outside GHG accounting tools, and sparse coverage of "
-        f"**Latin America & Caribbean** beyond Alliance and CIP."
+        f"First, **two centres are absent**: CIMMYT and ICARDA had not submitted at the time of "
+        f"this build (Section 4.1). This is consequential, not cosmetic — CIMMYT anchors much of "
+        f"CGIAR's South Asian wheat and maize adaptation analytics (including the ACASA atlas, "
+        f"Section 5.4), and ICARDA anchors dryland and West Asia / North Africa systems. Several "
+        f"apparent gaps below will narrow once they engage."
+    )
+    W(f"")
+    W(
+        f"Second, within the assets that *were* submitted, three gaps are robust enough to act on. "
+        f"**Adaptive Capacity** is essentially absent ({s['domain_counts'].get('Adaptive Capacity', 0)} "
+        f"assets) — the portfolio is strong on hazard and adaptation analytics but weak on the "
+        f"social and institutional capacity to respond, a recognised blind spot for climate "
+        f"targeting. **Latin America & Caribbean** and **Asia / South & SE Asia** are thin relative "
+        f"to Africa and Global coverage, concentrating geographic risk. And "
+        f"**{len(s['single_centre_domains'])} domain(s)** currently rest on a single centre "
+        f"(Section 5.2), so the system-wide picture in those areas is one withdrawal away from a "
+        f"hole. Each of these is an outreach target rather than a finding about CGIAR's true "
+        f"capability — the mapping surfaces where to look next, not a verdict on what exists."
     )
     W(f"")
     W(f"### 7.2 Data quality observations")
     W(f"")
     W(
-        f"Several fields were incomplete across submissions: asset rank and Hub role were blank "
-        f"for substantial share of assets. Centres have been contacted to complete missing "
-        f"assessments in next submission cycle."
+        f"The submissions are usable and rich, but several recurring data-quality issues shape how "
+        f"far the analysis can be pushed, and each has a concrete fix for the next cycle."
+    )
+    W(f"")
+    W(
+        f"**Incomplete assessment fields.** Asset rank, intended Hub role, and the qualitative "
+        f"ratings were left blank for a non-trivial share of assets, and only "
+        f"**{s['n_reported_inputs']} of {s['total']}** recorded their underlying climate inputs — "
+        f"which limits the duplication analysis (Section 6.7) more than any other gap. Mandating "
+        f"the Hub-role and climate-input fields would sharply increase the analytical value of the "
+        f"next round."
+    )
+    W(f"")
+    if s["dup_rank_centres"] or s["unranked_centres"]:
+        bits = []
+        if s["dup_rank_centres"]:
+            bits.append(
+                f"{', '.join(centre_label(c) for c in sorted(s['dup_rank_centres']))} submitted "
+                f"tied or duplicate ranks (e.g. several assets all ranked '1' or '2'), so their "
+                f"strategic nominations were capped at the three lowest-ranked assets"
+            )
+        if s["unranked_centres"]:
+            bits.append(
+                f"{', '.join(centre_label(c) for c in sorted(s['unranked_centres']))} submitted no "
+                f"ranks at all"
+            )
+        W(
+            f"**Inconsistent ranking.** The strategy intends a clean 1..N ordering per centre, but "
+            f"{'; '.join(bits)}. Ranking is the single most important field for prioritisation, so "
+            f"a brief validation step with each focal point before the next submission would pay "
+            f"off directly."
+        )
+        W(f"")
+    W(
+        f"**Free-text variability and AI-drafted fields.** Domain, type, and access were submitted "
+        f"as free text and normalised to controlled vocabularies (Section 2.2); a handful of "
+        f"entries also carried template example text or GPT-drafted descriptions that required "
+        f"scrubbing or validation. This is expected given the strategy's allowance for GPT "
+        f"drafting, but it reinforces that externally-researchable fields must be expert-checked, "
+        f"and that internal-use and strategic-importance fields should never be GPT-generated."
     )
     W(f"")
     n_unspec_dom = sum(1 for a in assets if a["domain_norm"] == "Not specified")
     if n_unspec_dom:
         W(
-            f"**{n_unspec_dom} asset(s)** had no climate domain specified and could not be "
-            f"classified from context. These are retained in inventory but excluded from "
+            f"Finally, **{n_unspec_dom} asset(s)** had no climate domain specified and could not be "
+            f"classified from context; they are retained in the inventory but excluded from the "
             f"domain figures."
         )
         W(f"")
@@ -808,6 +1026,19 @@ def build_report_body(assets, s, figures_prefix="figures"):
         f"portals and platforms so that Hub amplifies rather than duplicates those investments."
     )
     W(f"")
+    W(
+        f"What the mapping implies for sequencing is concrete. Roughly "
+        f"**{s['integration_counts'].get('Federate — ready', 0) + s['integration_counts'].get('Federate or light ingest', 0)} "
+        f"assets** look federation-ready or close to it and can be registered with little "
+        f"engineering; **{s['integration_counts'].get('Negotiate access', 0)}** are gated behind an "
+        f"access conversation and should enter a parallel, relationship-led track rather than block "
+        f"the technical work; and the shared upstream inputs identified in Section 6.7 (CHIRPS, "
+        f"station data, CMIP6, ERA5) argue for the Hub preprocessing these **once**, centrally, "
+        f"rather than each centre repeating the work. Federation-first keeps stewardship with the "
+        f"originating centres while still delivering cross-CGIAR discovery — the central tension the "
+        f"Hub is designed to resolve."
+    )
+    W(f"")
 
     W(f"---")
     W(f"")
@@ -818,6 +1049,39 @@ def build_report_body(assets, s, figures_prefix="figures"):
     W(f"3. **Agree federation vs ingestion for each priority asset** — work with data owners to determine appropriate integration pathway.")
     W(f"4. **Publish asset catalogue** — make inventory available to CGIAR partners via CDH portal.")
     W(f"5. **Iterate mapping annually** — re-run pipeline as new submissions arrive.")
+    W(f"")
+
+    W(f"---")
+    W(f"")
+    W(f"## Acknowledgments")
+    W(f"")
+    W(
+        f"This mapping exists only because colleagues across the centres took the time to nominate, "
+        f"describe, rank, and justify their strongest climate data assets — a substantial effort on "
+        f"top of busy research agendas. We are sincerely grateful to every contributor, and in "
+        f"particular to the centre focal points and nominators listed below."
+    )
+    W(f"")
+    noms = {}
+    for a in assets:
+        nm = a.get("nominator")
+        if nm:
+            first = nm.split("\n")[0].strip().rstrip(",")
+            if first:
+                noms.setdefault(a["centre"], set()).add(first)
+    W(f"| Centre | Contributors |")
+    W(f"|---|---|")
+    for c in sorted(noms):
+        people = "; ".join(sorted(noms[c]))
+        W(f"| {centre_label(c)} | {people} |")
+    W(f"")
+    W(
+        f"Coordination of the asset-mapping exercise is led by the Alliance of Bioversity "
+        f"International & CIAT under the Climate Action Program (Critical Capacity PoD2), in "
+        f"collaboration with the Climate Data Hub team and AoW1. Thanks also to the centre "
+        f"contacts who fielded follow-up questions on access, format, and provenance. Any errors "
+        f"of consolidation or normalisation are the compilers', not the contributors'."
+    )
     W(f"")
 
     W(f"---")
@@ -882,7 +1146,40 @@ def build_report_body(assets, s, figures_prefix="figures"):
         W(f"- **{centre_label(r['centre'])}**: {r['note']}")
     W(f"")
 
-    return "\n".join(lines)
+    return _linkify_crossrefs(lines)
+
+
+# ---------------------------------------------------------------------------
+# Cross-reference hyperlinking
+#   - numbered headings (## 6. / ### 6.2) get explicit ids {#sec-6} / {#sec-6-2}
+#   - "Annex C" headings get {#annex-c}
+#   - inline "Section 6.2" / "Annex C" mentions become links to those ids
+# ---------------------------------------------------------------------------
+def _linkify_crossrefs(lines):
+    import re
+    head_num = re.compile(r"^(#{2,3}) (\d+(?:\.\d+)?)([ .].*)$")
+    head_annex = re.compile(r"^(#{2,3}) Annex ([A-C])\b(.*)$")
+    ref_sec = re.compile(r"\bSection (\d+(?:\.\d+)?)\b")
+    ref_annex = re.compile(r"\bAnnex ([A-C])\b")
+
+    out = []
+    for ln in lines:
+        if ln.startswith("#"):
+            m = head_num.match(ln)
+            if m:
+                slug = "sec-" + m.group(2).replace(".", "-")
+                out.append(f"{m.group(1)} {m.group(2)}{m.group(3)} {{#{slug}}}")
+                continue
+            m = head_annex.match(ln)
+            if m:
+                out.append(f"{m.group(1)} Annex {m.group(2)}{m.group(3)} {{#annex-{m.group(2).lower()}}}")
+                continue
+            out.append(ln)
+        else:
+            ln = ref_sec.sub(lambda m: f"[Section {m.group(1)}](#sec-{m.group(1).replace('.', '-')})", ln)
+            ln = ref_annex.sub(lambda m: f"[Annex {m.group(1)}](#annex-{m.group(1).lower()})", ln)
+            out.append(ln)
+    return "\n".join(out)
 
 
 def build_markdown_report(assets, s, figures_prefix="figures"):

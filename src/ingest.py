@@ -761,21 +761,30 @@ def main():
     # not across the system. Convert to a 0..1 score (rank 1 = best) and a
     # top-3 flag, then compute the shared composite priority score.
     # ----------------------------------------------------------------------
-    centre_max_rank = defaultdict(int)
+    # Strategic nominations = each centre's THREE lowest-ranked (best) assets.
+    # Some centres submitted tied/duplicate ranks (e.g. ILRI ranked five assets
+    # "2"), so a simple rank<=3 test over-counts. Take the 3 best by position
+    # after a stable sort, capping at 3 regardless of ties.
+    by_centre = defaultdict(list)
     for a in all_assets:
-        if a["asset_rank_num"]:
-            centre_max_rank[a["centre"]] = max(centre_max_rank[a["centre"]],
-                                               a["asset_rank_num"])
-    for a in all_assets:
-        r, mx = a["asset_rank_num"], centre_max_rank[a["centre"]]
-        if r and mx:
-            a["rank_score"] = round((mx - r + 1) / mx, 3)
-            a["is_top3_in_centre"] = r <= 3
-        else:
-            a["rank_score"] = None
-            a["is_top3_in_centre"] = False
-        a["score_components"]["rank"] = a["rank_score"]
-        a["priority_score"] = composite_score(a["score_components"])
+        by_centre[a["centre"]].append(a)
+    n_dup_centres = 0
+    for centre, lst in by_centre.items():
+        ranks = [a["asset_rank_num"] for a in lst if a["asset_rank_num"]]
+        if len(ranks) != len(set(ranks)):
+            n_dup_centres += 1
+        mx = max(ranks, default=0)
+        ranked = sorted((a for a in lst if a["asset_rank_num"]),
+                        key=lambda a: (a["asset_rank_num"], a["name"]))
+        top3 = {id(a) for a in ranked[:3]}
+        for a in lst:
+            r = a["asset_rank_num"]
+            a["rank_score"] = round((mx - r + 1) / mx, 3) if (r and mx) else None
+            a["is_top3_in_centre"] = id(a) in top3
+            a["score_components"]["rank"] = a["rank_score"]
+            a["priority_score"] = composite_score(a["score_components"])
+    if n_dup_centres:
+        print(f"Note: {n_dup_centres} centre(s) submitted duplicate/tied asset ranks")
 
     n_scored = sum(1 for a in all_assets if a["priority_score"] is not None)
     print(f"Priority score computed for {n_scored}/{len(all_assets)} assets")

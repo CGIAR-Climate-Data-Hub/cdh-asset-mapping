@@ -100,9 +100,6 @@ def fig1_assets_per_centre(assets):
     patch_non  = mpatches.Patch(color=PROGRAM_BLUE_LT, label="Non-hub-funded centre")
     ax.legend(handles=[patch_hub, patch_non], loc="lower right",
               fontsize=8, frameon=False)
-
-    fig.suptitle("Figure 1 — Assets submitted per centre", x=0.02, ha="left",
-                 fontsize=11, fontweight="bold", color=CGIAR_GREEN)
     fig.tight_layout(rect=[0, 0, 1, 0.95])
     savefig(fig, "fig1_assets_per_centre.png")
 
@@ -137,9 +134,6 @@ def fig2_climate_domains(assets):
     ax.annotate("Domain definitions: Section 3.1",
                 xy=(0.98, 0.06), xycoords="axes fraction", ha="right",
                 fontsize=7.5, color="#888888", style="italic")
-
-    fig.suptitle("Figure 2 — Distribution by climate domain", x=0.02, ha="left",
-                 fontsize=11, fontweight="bold", color=CGIAR_GREEN)
     fig.tight_layout(rect=[0, 0, 1, 0.95])
     savefig(fig, "fig2_climate_domains.png")
 
@@ -167,9 +161,6 @@ def fig3_asset_types(assets):
     ax.spines[["top", "right", "left"]].set_visible(False)
     ax.grid(axis="x", color=GREY_LIGHT, linewidth=0.8, zorder=0)
     ax.set_axisbelow(True)
-
-    fig.suptitle("Figure 3 — Asset type (ownership)", x=0.02, ha="left",
-                 fontsize=11, fontweight="bold", color=CGIAR_GREEN)
     fig.tight_layout(rect=[0, 0, 1, 0.95])
     savefig(fig, "fig3_asset_types.png")
 
@@ -203,9 +194,6 @@ def fig4_geographic_coverage(assets):
         ax.annotate(f"Note: {n_unspec} asset(s) with unspecified coverage excluded",
                     xy=(0.98, 0.02), xycoords="axes fraction", ha="right",
                     fontsize=7.5, color="#888888", style="italic")
-
-    fig.suptitle("Figure 4 — Geographic coverage", x=0.02, ha="left",
-                 fontsize=11, fontweight="bold", color=CGIAR_GREEN)
     fig.tight_layout(rect=[0, 0, 1, 0.95])
     savefig(fig, "fig4_geographic_coverage.png")
 
@@ -287,9 +275,6 @@ def fig5_heatmap(assets):
                  f"Note: {n_excluded} asset(s) with hybrid domain labels "
                  f"(e.g. Sensitivity / Adaptation Analytics) excluded from heatmap.",
                  ha="center", fontsize=7.5, color="#888888", style="italic")
-
-    fig.suptitle("Figure 5 — Centre × domain heatmap", x=0.02, ha="left",
-                 fontsize=11, fontweight="bold", color=CGIAR_GREEN)
     fig.tight_layout(rect=[0, 0.04, 1, 0.96])
     savefig(fig, "fig5_heatmap_centre_domain.png")
 
@@ -350,8 +335,6 @@ def fig6_gap_matrix(assets):
     fig.text(0.5, 0.01, f"Red dot = no asset (coverage gap). "
              f"{n_excl} asset(s) with hybrid domain / unspecified geography excluded.",
              ha="center", fontsize=7.5, color="#888888", style="italic")
-    fig.suptitle("Figure 6 — Domain × geography coverage matrix", x=0.02, ha="left",
-                 fontsize=11, fontweight="bold", color=CGIAR_GREEN)
     fig.tight_layout(rect=[0, 0.04, 1, 0.94])
     savefig(fig, "fig6_gap_matrix.png")
 
@@ -399,8 +382,6 @@ def fig7_priority_quadrant(assets):
     leg.get_title().set_fontsize(8.5)
     ax.annotate("Bubble size = decision relevance", xy=(0.13, 0.13),
                 fontsize=7.5, color="#888888", style="italic")
-    fig.suptitle("Figure 7 — Priority quadrant", x=0.02, ha="left",
-                 fontsize=11, fontweight="bold", color=CGIAR_GREEN)
     fig.tight_layout(rect=[0, 0, 1, 0.95])
     savefig(fig, "fig7_priority_quadrant.png")
 
@@ -436,8 +417,6 @@ def fig8_integration_pathway(assets):
     ax.annotate("Heuristic from access status + file format — advisory, verify per asset.",
                 xy=(0.98, -0.22), xycoords="axes fraction", ha="right",
                 fontsize=7.5, color="#888888", style="italic")
-    fig.suptitle("Figure 8 — Suggested integration pathway", x=0.02, ha="left",
-                 fontsize=11, fontweight="bold", color=CGIAR_GREEN)
     fig.tight_layout(rect=[0, 0, 1, 0.95])
     savefig(fig, "fig8_integration_pathway.png")
 
