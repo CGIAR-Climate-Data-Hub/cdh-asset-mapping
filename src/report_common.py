@@ -490,10 +490,14 @@ def build_report_body(assets, s, figures_prefix="figures"):
     )
     W(f"")
     W(
-        f"![**Figure 1. Assets submitted per centre.** Number of catalogued assets contributed "
-        f"by each centre after consolidation (Section 2.3). Dark bars are the six Hub-funded "
-        f"centres; light bars are non-Hub-funded centres. Bar length is the asset count; centres "
-        f"are ordered largest to smallest.]({fig('fig1_assets_per_centre.png', 'Figure 1')})"
+        f"![**Figure 1. Assets submitted per centre.** Total catalogued assets per centre after "
+        f"consolidation (Section 2.3), ordered largest to smallest. Each bar is split into one "
+        f"coloured segment per nominating individual — a longer run of colours means more "
+        f"contributors behind a centre's portfolio (e.g. AfricaRice and IITA drew on many "
+        f"nominators, while ILRI, IFPRI, and IRRI came through a single nominator). Segment colour "
+        f"is arbitrary and carries no meaning (hence no legend); the number is the centre total. "
+        f"The interactive dashboard names each nominator and their count on "
+        f"hover.]({fig('fig1_assets_per_centre.png', 'Figure 1')})"
     )
     W(f"")
     W(f"| Centre | Assets | Hub-funded |")

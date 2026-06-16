@@ -219,13 +219,16 @@ button { font-family: inherit; cursor: pointer; }
 
 /* ---------- Centre strength ---------- */
 .strength-list { display: flex; flex-direction: column; gap: .45rem; }
-.strength-row { display: grid; grid-template-columns: 118px 1fr 34px; align-items: center; gap: .8rem; cursor: pointer; padding: .2rem .25rem; border-radius: 8px; }
+.strength-row { display: grid; grid-template-columns: 118px 1fr 26px 34px; align-items: center; gap: .7rem; cursor: pointer; padding: .2rem .25rem; border-radius: 8px; }
 .strength-row:hover { background: var(--bg); }
 .strength-name { font-weight: 600; font-size: .85rem; display: flex; align-items: center; gap: .35rem; }
 .strength-name .hub-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--blue); flex: none; }
-.strength-track { position: relative; height: 20px; background: var(--line-soft); border-radius: 6px; }
-.strength-fill { height: 100%; border-radius: 6px; background: var(--blue-lt); display: flex; align-items: center; min-width: 18px; }
-.strength-fill span { color: var(--green); font-size: .74rem; font-weight: 700; padding-left: .45rem; }
+.strength-track { position: relative; height: 20px; background: var(--line-soft); border-radius: 6px; overflow: hidden; }
+.strength-fill { position: absolute; left: 0; top: 0; height: 100%; display: flex; border-radius: 6px; overflow: hidden; min-width: 14px; }
+.strength-seg { height: 100%; transition: filter .1s; }
+.strength-seg:hover { filter: brightness(1.12); }
+.strength-seg + .strength-seg { box-shadow: inset 1px 0 0 rgba(255,255,255,.7); }
+.strength-count { font-size: .78rem; font-weight: 700; color: var(--ink-soft); text-align: right; }
 .strength-badge { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: .76rem; font-weight: 700; }
 
 /* ---------- Pathway bars ---------- */

@@ -74,33 +74,87 @@ def bar_colours(labels, funded_set=None):
     return [PROGRAM_BLUE if l in funded_set else PROGRAM_BLUE_LT for l in labels]
 
 
+def _heatmap(ax, matrix, row_labels, col_labels, zero_dot=False):
+    """Shared compact heatmap style for the centre×domain and domain×geography
+    matrices. Column labels are horizontal (use \\n for two lines) so they never
+    overlap; cells are rectangular (aspect='auto') to keep height down."""
+    from matplotlib.colors import LinearSegmentedColormap
+    cmap = LinearSegmentedColormap.from_list(
+        "cdh_blue", ["#FFFFFF", "#DCEBFB", PROGRAM_BLUE_LT, PROGRAM_BLUE])
+    mx = max(int(matrix.max()), 1)
+    ax.imshow(matrix, aspect="auto", cmap=cmap, vmin=0, vmax=mx)
+
+    nrows, ncols = matrix.shape
+    for ri in range(nrows):
+        for ci in range(ncols):
+            v = int(matrix[ri, ci])
+            if v == 0:
+                if zero_dot:
+                    ax.text(ci, ri, "•", ha="center", va="center",
+                            fontsize=9, color="#D98273")
+            else:
+                col = "white" if v >= mx * 0.5 else CGIAR_GREEN
+                ax.text(ci, ri, str(v), ha="center", va="center",
+                        fontsize=9, color=col, fontweight="bold")
+
+    ax.set_xticks(range(ncols))
+    ax.set_xticklabels(col_labels, rotation=0, ha="center", fontsize=7.8,
+                       color="#3D4F5C")
+    ax.xaxis.set_ticks_position("top")
+    ax.xaxis.set_label_position("top")
+    ax.set_yticks(range(nrows))
+    ax.set_yticklabels(row_labels, fontsize=8.5, color="#3D4F5C")
+    # White gutters between cells
+    ax.set_xticks(np.arange(-0.5, ncols), minor=True)
+    ax.set_yticks(np.arange(-0.5, nrows), minor=True)
+    ax.grid(which="minor", color="white", linewidth=2.5)
+    ax.tick_params(which="both", length=0)
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
+
 # ---------------------------------------------------------------------------
 # Figure 1 — Assets per centre
 # ---------------------------------------------------------------------------
-def fig1_assets_per_centre(assets):
-    counts = Counter(a["centre"] for a in assets)
-    centres = sorted(counts, key=counts.get, reverse=True)
-    values  = [counts[c] for c in centres]
-    colours = bar_colours(centres, HUB_FUNDED)
+# Segment palette for nominator contributions (cycled; identity incidental,
+# no legend — the interactive dashboard shows who on hover).
+SEG_PALETTE = ["#1955A6", "#1F8A70", "#E0A11B", "#63A9FE", "#C2691C", "#17F1BD",
+               "#7D8CC4", "#8B5CF6", "#2E7D52", "#EC4899", "#5C6B73", "#AE6C7A",
+               "#4A90D9", "#F4B942"]
 
-    fig, ax = plt.subplots(figsize=(8, 4.5))
-    bars = ax.barh(centres[::-1], values[::-1], color=colours[::-1],
-                   height=0.65, edgecolor="none")
-    ax.bar_label(bars, padding=4, fontsize=9, color="#333333")
-    ax.set_xlabel("Number of assets", fontsize=10)
-    ax.set_xlim(0, max(values) * 1.18)
-    ax.tick_params(axis="y", labelsize=9)
+
+def fig1_assets_per_centre(assets):
+    from collections import defaultdict
+    by_centre = defaultdict(lambda: defaultdict(int))
+    totals = Counter()
+    for a in assets:
+        c = a["centre"]
+        nm = (a.get("nominator") or "Unattributed").split("\n")[0].strip() or "Unattributed"
+        by_centre[c][nm] += 1
+        totals[c] += 1
+    # Ascending so the largest centre sits at the top of the horizontal bars.
+    centres = sorted(totals, key=totals.get)
+
+    fig, ax = plt.subplots(figsize=(8, 4.6))
+    for yi, c in enumerate(centres):
+        left = 0
+        for i, (nm, cnt) in enumerate(sorted(by_centre[c].items(), key=lambda x: -x[1])):
+            ax.barh(yi, cnt, left=left, height=0.66,
+                    color=SEG_PALETTE[i % len(SEG_PALETTE)],
+                    edgecolor="white", linewidth=0.8, zorder=2)
+            left += cnt
+        ax.text(left + max(totals.values()) * 0.012, yi, str(left),
+                va="center", fontsize=9, color="#333333")
+
+    ax.set_yticks(range(len(centres)))
+    ax.set_yticklabels(centres, fontsize=9)
+    ax.set_xlabel("Number of assets (bar split by nominator)", fontsize=10)
+    ax.set_xlim(0, max(totals.values()) * 1.15)
     ax.tick_params(axis="x", labelsize=9)
     ax.spines[["top", "right", "left"]].set_visible(False)
     ax.grid(axis="x", color=GREY_LIGHT, linewidth=0.8, zorder=0)
     ax.set_axisbelow(True)
-
-    # Legend
-    patch_hub  = mpatches.Patch(color=PROGRAM_BLUE,    label="Hub-funded centre")
-    patch_non  = mpatches.Patch(color=PROGRAM_BLUE_LT, label="Non-hub-funded centre")
-    ax.legend(handles=[patch_hub, patch_non], loc="lower right",
-              fontsize=8, frameon=False)
-    fig.tight_layout(rect=[0, 0, 1, 0.95])
+    fig.tight_layout()
     savefig(fig, "fig1_assets_per_centre.png")
 
 
@@ -216,47 +270,15 @@ def fig5_heatmap(assets):
             ci = HEATMAP_DOMAINS.index(a["domain_norm"])
             matrix[ri, ci] += 1
 
-    cell_size = 0.72   # inches per cell — square
-    fig_w = cell_size * len(HEATMAP_DOMAINS) + 2.0
-    fig_h = cell_size * len(centres_ordered) + 1.2
-
-    fig, ax = plt.subplots(figsize=(fig_w, fig_h))
-
-    # Custom blue colormap: white → program blue
-    from matplotlib.colors import LinearSegmentedColormap
-    cmap = LinearSegmentedColormap.from_list(
-        "cdh_blue", ["#FFFFFF", PROGRAM_BLUE_LT, PROGRAM_BLUE])
-
-    im = ax.imshow(matrix, aspect="equal", cmap=cmap,
-                   vmin=0, vmax=max(matrix.max(), 1))
-
-    # Annotate cells
-    for ri in range(len(centres_ordered)):
-        for ci in range(len(HEATMAP_DOMAINS)):
-            v = matrix[ri, ci]
-            if v > 0:
-                txt_col = "white" if v >= matrix.max() * 0.6 else CGIAR_GREEN
-                ax.text(ci, ri, str(v), ha="center", va="center",
-                        fontsize=9, color=txt_col, fontweight="bold")
-
-    # Axes
-    ax.set_xticks(range(len(HEATMAP_DOMAINS)))
-    ax.set_xticklabels(HEATMAP_DOMAINS, rotation=40, ha="right", fontsize=8)
-    ax.xaxis.set_ticks_position("top")
-    ax.xaxis.set_label_position("top")
-    ax.set_yticks(range(len(centres_ordered)))
-    ax.set_yticklabels(centres_ordered, fontsize=9)
-
-    # Thin grid lines between cells
-    ax.set_xticks(np.arange(-0.5, len(HEATMAP_DOMAINS)), minor=True)
-    ax.set_yticks(np.arange(-0.5, len(centres_ordered)), minor=True)
-    ax.grid(which="minor", color="white", linewidth=1.5)
-    ax.tick_params(which="minor", length=0)
-    ax.tick_params(which="major", length=0)
-    for spine in ax.spines.values():
-        spine.set_visible(False)
-
-    # Exclusion note lives in the report caption, not the plot.
+    SHORT = {
+        "Adaptation Analytics": "Adapt.\nAnalytics", "Hazard": "Hazard",
+        "Multi-domain": "Multi-\ndomain", "Exposure": "Exposure",
+        "Mitigation": "Mitigation", "Hazard / Climate Services": "Hazard /\nClim. Svc",
+        "Sensitivity": "Sensitivity", "Adaptive Capacity": "Adaptive\nCapacity",
+    }
+    fig, ax = plt.subplots(figsize=(8.8, 4.7))
+    _heatmap(ax, matrix, [c.replace("_", "-") for c in centres_ordered],
+             [SHORT.get(d, d) for d in HEATMAP_DOMAINS], zero_dot=False)
     fig.tight_layout()
     savefig(fig, "fig5_heatmap_centre_domain.png")
 
@@ -279,38 +301,14 @@ def fig6_gap_matrix(assets):
         if d in DOMAINS and g in GEOS:
             matrix[DOMAINS.index(d), GEOS.index(g)] += 1
 
-    # Compact rectangular cells (aspect="auto") keep the matrix from dominating
-    # the page; notes live in the report caption.
-    fig, ax = plt.subplots(figsize=(8.6, 3.9))
-    from matplotlib.colors import LinearSegmentedColormap
-    cmap = LinearSegmentedColormap.from_list(
-        "cdh_blue", ["#FFFFFF", PROGRAM_BLUE_LT, PROGRAM_BLUE])
-    im = ax.imshow(matrix, aspect="auto", cmap=cmap,
-                   vmin=0, vmax=max(matrix.max(), 1))
-
-    for ri in range(len(DOMAINS)):
-        for ci in range(len(GEOS)):
-            v = matrix[ri, ci]
-            if v == 0:
-                ax.text(ci, ri, "·", ha="center", va="center",
-                        fontsize=13, color="#C9492F")
-            else:
-                col = "white" if v >= matrix.max() * 0.6 else CGIAR_GREEN
-                ax.text(ci, ri, str(v), ha="center", va="center",
-                        fontsize=9, color=col, fontweight="bold")
-
-    ax.set_xticks(range(len(GEOS)))
-    ax.set_xticklabels(GEOS, rotation=20, ha="left", fontsize=8)
-    ax.xaxis.set_ticks_position("top")
-    ax.xaxis.set_label_position("top")
-    ax.set_yticks(range(len(DOMAINS)))
-    ax.set_yticklabels(DOMAINS, fontsize=8.5)
-    ax.set_xticks(np.arange(-0.5, len(GEOS)), minor=True)
-    ax.set_yticks(np.arange(-0.5, len(DOMAINS)), minor=True)
-    ax.grid(which="minor", color="white", linewidth=1.5)
-    ax.tick_params(which="both", length=0)
-    for spine in ax.spines.values():
-        spine.set_visible(False)
+    GEO_SHORT = {
+        "Africa": "Africa", "Asia / South & SE Asia": "Asia /\nSE Asia",
+        "Latin America & Caribbean": "Lat. Am. /\nCaribbean", "Global": "Global",
+        "Multi-regional": "Multi-\nregional",
+    }
+    fig, ax = plt.subplots(figsize=(7.6, 4.4))
+    _heatmap(ax, matrix, DOMAINS, [GEO_SHORT.get(g, g) for g in GEOS],
+             zero_dot=True)
     fig.tight_layout()
     savefig(fig, "fig6_gap_matrix.png")
 

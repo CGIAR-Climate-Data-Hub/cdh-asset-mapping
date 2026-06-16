@@ -341,23 +341,39 @@ function renderInsights() {
 
 const scoreColor = (s) => s >= 78 ? COL.open : s >= 65 ? COL.gold : COL.restricted;
 
+// Palette for nominator segments (identity is incidental — no legend; the
+// nominator + count is revealed on hover).
+const SEG_COLORS = ["#1955A6", "#1F8A70", "#E0A11B", "#63A9FE", "#C2691C",
+  "#17F1BD", "#7D8CC4", "#8B5CF6", "#2E7D52", "#EC4899", "#5C6B73", "#AE6C7A"];
+
 function renderCentreStrength() {
   const map = {};
   state.assets.forEach((a) => {
-    (map[a.centre] ||= { n: 0, sum: 0, k: 0, hub: a.hub_funded });
-    map[a.centre].n++;
-    if (a.priority_score != null) { map[a.centre].sum += a.priority_score; map[a.centre].k++; }
+    (map[a.centre] ||= { n: 0, sum: 0, k: 0, hub: a.hub_funded, noms: {} });
+    const m = map[a.centre];
+    m.n++;
+    if (a.priority_score != null) { m.sum += a.priority_score; m.k++; }
+    const nm = (a.nominator || "Unattributed").split("\n")[0].trim() || "Unattributed";
+    m.noms[nm] = (m.noms[nm] || 0) + 1;
   });
-  const rows = Object.entries(map).map(([c, m]) => ({ c, n: m.n, mean: m.k ? Math.round(m.sum / m.k) : 0, hub: m.hub }))
-    .sort((a, b) => b.n - a.n);
+  const rows = Object.entries(map).map(([c, m]) => ({
+    c, n: m.n, mean: m.k ? Math.round(m.sum / m.k) : 0, hub: m.hub,
+    segs: Object.entries(m.noms).sort((a, b) => b[1] - a[1]),
+  })).sort((a, b) => b.n - a.n);
   const max = Math.max(1, ...rows.map((r) => r.n));
 
-  $("centreStrength").innerHTML = rows.map((r) => `
-    <div class="strength-row" data-centre="${esc(r.c)}" title="Open ${esc(r.c)} in Explore">
+  $("centreStrength").innerHTML = rows.map((r) => {
+    const segs = r.segs.map(([nm, cnt], i) =>
+      `<span class="strength-seg" style="width:${cnt / r.n * 100}%;background:${SEG_COLORS[i % SEG_COLORS.length]}" title="${esc(nm)}: ${cnt} asset${cnt > 1 ? "s" : ""}"></span>`
+    ).join("");
+    return `
+    <div class="strength-row" data-centre="${esc(r.c)}">
       <div class="strength-name">${r.hub ? '<span class="hub-dot" title="Hub-funded"></span>' : ""}${esc(r.c)}</div>
-      <div class="strength-track"><div class="strength-fill" style="width:${Math.max(6, r.n / max * 100)}%"><span>${r.n}</span></div></div>
+      <div class="strength-track"><div class="strength-fill" style="width:${Math.max(6, r.n / max * 100)}%">${segs}</div></div>
+      <div class="strength-count">${r.n}</div>
       <div class="strength-badge" style="background:${scoreColor(r.mean)}" title="Mean priority score">${r.mean}</div>
-    </div>`).join("");
+    </div>`;
+  }).join("");
 
   $("centreStrength").querySelectorAll(".strength-row").forEach((row) =>
     row.addEventListener("click", () => drillTo([["centre", row.dataset.centre]])));
