@@ -1,0 +1,87 @@
+---
+title: "CGIAR Climate Data Hub - System-Wide Climate Data Asset Mapping"
+subtitle: "Internal review draft"
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: false
+    embed-resources: true
+    include-in-header:
+      text: |
+        <style>
+        #TOC {
+          position: sticky;
+          top: 1rem;
+          max-height: calc(100vh - 2rem);
+          overflow-y: auto;
+        }
+        @media print {
+          details.code-fold summary,
+          details.code-fold .sourceCode,
+          details.code-fold .cell-output {
+            display: none !important;
+          }
+        }
+        </style>
+  pdf:
+    toc: true
+    number-sections: false
+  docx:
+    toc: true
+    number-sections: false
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{python}
+#| echo: true
+#| code-fold: true
+#| code-summary: "Show code"
+import pathlib
+import sys
+from IPython.display import Markdown, display
+
+ROOT = pathlib.Path.cwd()
+sys.path.insert(0, str(ROOT / "src"))
+
+# Set live dashboard link here when official endpoint is available.
+DASHBOARD_URL = "docs/index.html"
+DASHBOARD_LABEL = "CDH interactive dashboard"
+
+from report_common import build_report_body, compute_stats, load
+```
+
+```{python}
+#| echo: true
+#| code-fold: true
+#| code-summary: "Show code"
+assets, merge_log = load()
+stats = compute_stats(assets, merge_log)
+```
+
+**Version:** 1.0-draft  
+**Report month:** `{{< meta date >}}`  
+**Status:** Internal review draft  
+**Assets in current build:** `{python} stats["total"]`
+
+```{python}
+#| output: asis
+if DASHBOARD_URL:
+    display(Markdown(
+        f"**Interactive data access:** [{DASHBOARD_LABEL}]({DASHBOARD_URL})"
+    ))
+else:
+    display(Markdown(
+        "**Interactive data access:** static dashboard available at `docs/index.html`."
+    ))
+```
+
+```{python}
+#| label: report-body
+#| output: asis
+display(Markdown(build_report_body(assets, stats, figures_prefix="outputs/figures")))
+```

@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CDH Asset Explorer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
+    <script src="dashboard.js" defer></script>
+  </head>
+  <body>
+    <!-- ===== Top bar ===== -->
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark"></span>
+        <div>
+          <p class="brand-eyebrow">CGIAR Climate Data Hub</p>
+          <h1>Asset Explorer</h1>
+        </div>
+      </div>
+
+      <nav class="viewnav" id="viewNav" aria-label="Views">
+        <button type="button" class="viewtab is-active" data-view="overview" aria-current="page">
+          <span class="viewtab-title">Overview</span>
+          <span class="viewtab-sub">Where are we strong &amp; weak?</span>
+        </button>
+        <button type="button" class="viewtab" data-view="action">
+          <span class="viewtab-title">Action</span>
+          <span class="viewtab-sub">What to do now &amp; next</span>
+        </button>
+        <button type="button" class="viewtab" data-view="explore">
+          <span class="viewtab-title">Explore</span>
+          <span class="viewtab-sub">Every asset, in detail</span>
+        </button>
+      </nav>
+
+      <div class="topbar-actions">
+        <a class="ghost-link" href="../report.html" target="_blank" rel="noopener">Full report ↗</a>
+        <button id="downloadCsv" type="button" class="btn btn-quiet">Export CSV</button>
+      </div>
+    </header>
+
+    <!-- ===== KPI strip ===== -->
+    <section class="kpi-strip" id="kpiStrip" aria-label="Portfolio summary">
+      <article class="kpi"><span class="kpi-label">Assets in view</span><strong id="kpiAssets">—</strong><span class="kpi-foot" id="kpiAssetsFoot"></span></article>
+      <article class="kpi"><span class="kpi-label">Centres</span><strong id="kpiCentres">—</strong><span class="kpi-foot">submitting</span></article>
+      <article class="kpi"><span class="kpi-label">Open access</span><strong id="kpiOpen">—</strong><span class="kpi-foot">share of view</span></article>
+      <article class="kpi kpi-accent"><span class="kpi-label">Ready to act now</span><strong id="kpiActNow">—</strong><span class="kpi-foot">open · ready · priority 75+</span></article>
+      <article class="kpi"><span class="kpi-label">Mean priority</span><strong id="kpiScore">—</strong><span class="kpi-foot">0–100 scale</span></article>
+    </section>
+
+    <div class="layout">
+      <!-- ===== Filter rail ===== -->
+      <aside class="rail" id="rail" aria-label="Filters">
+        <div class="rail-head">
+          <h2>Filter</h2>
+          <button id="resetFilters" type="button" class="link-btn">Reset</button>
+        </div>
+
+        <div class="search-box">
+          <input id="searchInput" type="search" placeholder="Search name, description…" aria-label="Search assets">
+        </div>
+
+        <button id="actNowToggle" type="button" class="actnow-btn" aria-pressed="false">
+          ⚡ Show only “act now” assets
+        </button>
+
+        <div class="rail-scroll" id="filterGroups"><!-- filter groups injected --></div>
+
+        <div class="rail-foot">
+          <p class="rail-active-label">Active filters</p>
+          <div id="activeFilters" class="active-filters"></div>
+        </div>
+      </aside>
+
+      <!-- ===== Views ===== -->
+      <main class="content">
+
+        <!-- OVERVIEW -->
+        <section class="view is-active" id="view-overview" data-view="overview">
+          <div class="view-grid overview-grid">
+            <article class="panel span-2 panel-hero">
+              <div class="panel-head">
+                <div>
+                  <h3>Coverage map — domain × geography</h3>
+                  <p class="panel-sub">Whole-portfolio view. Click a cell to open those assets in Explore.</p>
+                </div>
+                <div class="legend" id="gapLegend"></div>
+              </div>
+              <div id="gapMatrix" class="gap-matrix" role="img" aria-label="Domain by geography coverage matrix"></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head"><div><h3>Coverage insights</h3><p class="panel-sub">Auto-generated from the current view.</p></div></div>
+              <div id="insightList" class="insight-list"></div>
+            </article>
+
+            <article class="panel span-3">
+              <div class="panel-head">
+                <div><h3>Centre strength</h3><p class="panel-sub">Bar = assets submitted · badge = mean priority (colour-scaled). Click a centre to open in Explore.</p></div>
+              </div>
+              <div id="centreStrength" class="strength-list"></div>
+            </article>
+
+            <article class="panel span-2">
+              <div class="panel-head"><div><h3>Domain mix</h3></div></div>
+              <div class="chart-wrap"><canvas id="domainChart"></canvas></div>
+            </article>
+            <article class="panel">
+              <div class="panel-head"><div><h3>Ownership &amp; access</h3></div></div>
+              <div class="chart-wrap"><canvas id="ownerChart"></canvas></div>
+            </article>
+          </div>
+        </section>
+
+        <!-- ACTION -->
+        <section class="view" id="view-action" data-view="action">
+          <div class="view-grid action-grid">
+            <article class="panel span-2 panel-hero">
+              <div class="panel-head">
+                <div><h3>Priority quadrant</h3><p class="panel-sub">Technical readiness × reuse potential. Bubble size = decision relevance · colour = access. Click a bubble for detail.</p></div>
+                <div class="legend" id="quadLegend"></div>
+              </div>
+              <div class="chart-wrap tall"><canvas id="quadrant"></canvas></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head"><div><h3>Integration pathway</h3><p class="panel-sub">Heuristic from access + format. Click to filter.</p></div></div>
+              <div id="pathwayBars" class="pathway-bars"></div>
+            </article>
+
+            <article class="panel span-3">
+              <div class="panel-head queue-head">
+                <div><h3>Action queue</h3><p class="panel-sub">Ranked by composite priority score within the current filters.</p></div>
+                <div class="queue-toggle" id="queueToggle" role="tablist">
+                  <button type="button" class="qtab is-active" data-queue="now" role="tab">Act now <span id="qNowCount" class="qcount">0</span></button>
+                  <button type="button" class="qtab" data-queue="next" role="tab">Next cycle <span id="qNextCount" class="qcount">0</span></button>
+                </div>
+              </div>
+              <div id="actionQueue" class="queue-list"></div>
+            </article>
+          </div>
+        </section>
+
+        <!-- EXPLORE -->
+        <section class="view" id="view-explore" data-view="explore">
+          <div class="view-grid">
+            <article class="panel span-3">
+              <div class="panel-head table-head">
+                <div><h3>All assets <span id="exploreCount" class="count-chip"></span></h3><p class="panel-sub">Click any row for the full record.</p></div>
+                <label class="sort-control">
+                  <span>Sort</span>
+                  <select id="tableSort">
+                    <option value="priority_score">Priority score</option>
+                    <option value="name">Name</option>
+                    <option value="centre">Centre</option>
+                    <option value="domain_norm">Domain</option>
+                    <option value="access_norm">Access</option>
+                    <option value="integration_hint">Pathway</option>
+                  </select>
+                </label>
+              </div>
+              <div class="table-wrap">
+                <table id="assetTable">
+                  <thead>
+                    <tr>
+                      <th scope="col" data-sort="name" class="sortable">Asset</th>
+                      <th scope="col" data-sort="centre" class="sortable">Centre</th>
+                      <th scope="col" data-sort="domain_norm" class="sortable">Domain</th>
+                      <th scope="col" data-sort="geo_norm" class="sortable">Geography</th>
+                      <th scope="col" data-sort="type_norm" class="sortable">Type</th>
+                      <th scope="col" data-sort="priority_score" class="num sortable">Score</th>
+                      <th scope="col" data-sort="access_norm" class="sortable">Access</th>
+                      <th scope="col" data-sort="integration_hint" class="sortable">Pathway</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- ===== Detail drawer ===== -->
+    <div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
+    <aside class="drawer" id="drawer" aria-label="Asset detail" aria-hidden="true">
+      <div class="drawer-head">
+        <button id="drawerClose" type="button" class="link-btn" aria-label="Close detail">✕ Close</button>
+      </div>
+      <div id="drawerBody" class="drawer-body"></div>
+    </aside>
+  </body>
+</html>

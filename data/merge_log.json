@@ -1,0 +1,57 @@
+{
+  "description": "Records asset consolidations applied during ingestion. Where multiple submitted entries represent sub-components or sub-products of a single dataset they are merged into one record. Update this file when new consolidations are agreed.",
+  "applied": [
+    {
+      "centre": "Alliance",
+      "merged_names": [
+        "CCAFS-Climate data portal - statistical downscaling CIMP5",
+        "CCAFS-Climate data portal - statistical downscaling CIMP6",
+        "CCAFS-Climate data portal - MarkSim v2.0",
+        "CCAFS-Climate data portal -temporal bias correction of daily data"
+      ],
+      "consolidated_name": "CCAFS-Climate data portal (MarkSim, CMIP5/6 downscaling, bias correction)",
+      "entries_removed": 3,
+      "rationale": "Four sub-products of the same CCAFS-Climate platform submitted as separate entries"
+    },
+    {
+      "centre": "WorldFish",
+      "merged_names": [
+        "Future fish biomass projections (DBEM)",
+        "Future fish biomass projections (FishMIP)"
+      ],
+      "consolidated_name": "Future fish biomass projections (DBEM / FishMIP)",
+      "entries_removed": 1,
+      "rationale": "Two model runs of the same product submitted as separate entries"
+    },
+    {
+      "centre": "CIFOR_ICRAF",
+      "merged_names": [
+        "Spatial Assessments of Changes in Soil Health Indicators in Benin",
+        "Spatial Assessments of Changes in Soil Health Indicators in Kenya"
+      ],
+      "consolidated_name": "Spatial Assessments of Changes in Soil Health Indicators (Benin, Kenya)",
+      "entries_removed": 1,
+      "rationale": "Same dataset applied in two countries submitted as separate entries"
+    },
+    {
+      "centre": "ILRI",
+      "merged_names": [
+        "VECTRI Climate Forcing and Preprocessed Dataset",
+        "VECTRI Malaria Model Output Dataset for Ethiopia"
+      ],
+      "consolidated_name": "VECTRI Malaria Model Dataset (climate forcing inputs + model outputs, Ethiopia)",
+      "entries_removed": 1,
+      "rationale": "Model inputs and outputs from same pipeline submitted as separate entries"
+    }
+  ],
+  "recommended_catalogue": [
+    {
+      "centre": "IWMI",
+      "note": "Africa Flood Hazard and Africa Drought Hazard are component layers of Africa Multi-hazard Risk Maps — consider cataloguing as one entry with sub-layers (3 → 1)"
+    },
+    {
+      "centre": "IFPRI",
+      "note": "'Global harmonized cropland' and 'Time series of global harmonized cropland extent 2011-2020' are static and temporal versions of the same product — consider one catalogue record (2 → 1)"
+    }
+  ]
+}

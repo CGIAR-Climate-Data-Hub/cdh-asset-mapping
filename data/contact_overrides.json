@@ -1,0 +1,59 @@
+{
+  "_comment": "Researched contact emails for nominators/contacts who left the field blank. Applied by src/ingest.py when an asset has no contact_email. Matched (case-insensitive, whitespace-collapsed) against the asset's primary_contact first, then nominator. confidence: 'verified' = found verbatim on an authoritative page; 'inferred' = deduced from the centre's f.lastname@domain pattern + a verified domain — flagged in the dashboard, verify before sending. Do not hand-edit assets.json.",
+  "overrides": [
+    {
+      "match": ["Michelle Tigchelaar"],
+      "email": "m.tigchelaar@cgiar.org",
+      "confidence": "verified",
+      "source": "Google Scholar (verified cgiar.org); WorldFish staff profile; ERL 2024 corresponding author"
+    },
+    {
+      "match": ["Winowiecki, Leigh Ann", "Leigh Ann Winowiecki"],
+      "email": "l.a.winowiecki@cgiar.org",
+      "confidence": "verified",
+      "source": "IWMI/WLE CGIAR profile; Google Scholar verified cgiar.org"
+    },
+    {
+      "match": ["Heidy Gamarra"],
+      "email": "h.gamarra@cgiar.org",
+      "confidence": "verified",
+      "source": "ilcym.cipotato.org list-of-authors (verbatim); cipotato.org profile"
+    },
+    {
+      "match": ["Pablo Carhuapoma"],
+      "email": "p.carhuapoma@cgiar.org",
+      "confidence": "verified",
+      "source": "ilcym.cipotato.org list-of-authors (verbatim)"
+    },
+    {
+      "match": ["Aynekulu, Ermias", "Ermias Aynekulu"],
+      "email": "e.aynekulu@cifor-icraf.org",
+      "confidence": "inferred",
+      "source": "Google Scholar verified cifor-icraf.org domain + CIFOR-ICRAF f.lastname pattern (alt: e.betemariam@cifor-icraf.org)"
+    },
+    {
+      "match": ["Henry Juarez"],
+      "email": "h.juarez@cgiar.org",
+      "confidence": "inferred",
+      "source": "Google Scholar verified cgiar.org (CIP) + CIP f.lastname@cgiar.org pattern"
+    },
+    {
+      "match": ["David Ramirez"],
+      "email": "d.ramirez@cgiar.org",
+      "confidence": "inferred",
+      "source": "Google Scholar verified cgiar.org (CIP, David A. Ramirez Collantes) + CIP pattern"
+    },
+    {
+      "match": ["Xiaojing Wei"],
+      "email": "x.wei@cgiar.org",
+      "confidence": "inferred",
+      "source": "Alliance/CGIAR f.lastname@cgiar.org pattern; affiliation via Google Scholar/ResearchGate (alt: xiaojing.wei@cgiar.org)"
+    },
+    {
+      "match": ["Robert Hijmans"],
+      "email": "rhijmans@ucdavis.edu",
+      "confidence": "inferred",
+      "source": "UC Davis faculty (external; terra/raster author) — public academic address"
+    }
+  ]
+}
