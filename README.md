@@ -2,6 +2,19 @@
 
 Reproducible pipeline for CGIAR Climate Data Hub system-wide asset mapping exercise.
 
+## Links
+
+| | |
+|---|---|
+| 📊 **Interactive dashboard** | https://cgiar-climate-data-hub.github.io/cdh-asset-mapping/ |
+| 📄 **Full report** | https://cgiar-climate-data-hub.github.io/cdh-asset-mapping/report.html |
+| 💻 **Repository** | https://github.com/CGIAR-Climate-Data-Hub/cdh-asset-mapping |
+
+> The dashboard and report are served from `docs/` via GitHub Pages. The two
+> public links go live once Pages is enabled: **repo → Settings → Pages →
+> Source: "Deploy from a branch" → Branch `main` / folder `/docs`**. Until then
+> the same files render locally with `python -m http.server --directory docs`.
+
 ## Structure
 
 ```
@@ -20,8 +33,9 @@ cdh-asset-mapping/
 ├── dashboard/
 │   ├── app.R                # Interactive Shiny dashboard
 │   └── README.md
-├── docs/
-│   ├── index.html           # Static GitHub Pages dashboard
+├── docs/                    # GitHub Pages site root
+│   ├── index.html           # Interactive dashboard (Overview/Action/Explore)
+│   ├── report.html          # Published full report (self-contained)
 │   ├── dashboard.js         # Client-side interactions
 │   ├── styles.css           # Dashboard styling
 │   └── data/assets.json     # Exported dashboard data
