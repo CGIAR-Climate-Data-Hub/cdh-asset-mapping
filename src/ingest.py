@@ -354,6 +354,53 @@ def integration_hint(access_norm, format_class, api_or_cloud):
     return "Assess"
 
 
+# ---------------------------------------------------------------------------
+# Climate-input extraction — supports the strategy's stated purpose of
+# detecting duplication/dependency across pipelines. Free-text Primary Climate
+# Inputs are scanned for recognised dataset names. Order: longer/specific first.
+# ---------------------------------------------------------------------------
+CLIMATE_INPUT_PATTERNS = [
+    (r"\bag-?era5\b",                 "AgERA5"),
+    (r"\bera5\b",                     "ERA5"),
+    (r"\bera-?interim\b",             "ERA-Interim"),
+    (r"\bchirps\b",                   "CHIRPS"),
+    (r"\bchirts\b",                   "CHIRTS"),
+    (r"\bcmip-?6\b",                  "CMIP6"),
+    (r"\bcmip-?5\b",                  "CMIP5"),
+    (r"\bcordex\b",                   "CORDEX"),
+    (r"\bnex-?gddp\b",                "NEX-GDDP"),
+    (r"\bagmerra\b",                  "AgMERRA"),
+    (r"\bmerra-?2?\b",                "MERRA-2"),
+    (r"\bterraclimate\b",             "TerraClimate"),
+    (r"\bworldclim\b",                "WorldClim"),
+    (r"\bchelsa\b",                   "CHELSA"),
+    (r"\bcru\b",                      "CRU TS"),
+    (r"\bnasa\s*power\b",             "NASA POWER"),
+    (r"\bgpm\b|\bimerg\b",            "GPM/IMERG"),
+    (r"\btrmm\b",                     "TRMM"),
+    (r"\bmodis\b",                    "MODIS"),
+    (r"\bsentinel\b",                 "Sentinel"),
+    (r"\blandsat\b",                  "Landsat"),
+    (r"\bisimip\b",                   "ISIMIP"),
+    (r"\benacts\b",                   "ENACTS"),
+    (r"\bagcfsr\b",                   "AgCFSR"),
+    (r"\bstation\b|\bgauge\b|\bobserv",   "Station / observational"),
+    (r"\breanalys",                   "Reanalysis (unspecified)"),
+]
+
+
+def extract_climate_inputs(raw):
+    """Return a sorted list of recognised climate input datasets from free text."""
+    if not raw:
+        return []
+    low = str(raw).lower()
+    found = []
+    for pat, label in CLIMATE_INPUT_PATTERNS:
+        if re.search(pat, low) and label not in found:
+            found.append(label)
+    return found
+
+
 EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
 
 
@@ -542,6 +589,8 @@ def read_centre(centre: str, filepath: Path, example_vals: set = None) -> list[d
         raw_role    = get("Intended Hub Role", "hub_role", "Hub Role")
         raw_access  = get("Access Status", "access_status")
         raw_contact = get("Primary Contact", "primary_contact")
+        raw_inputs  = get("Primary Climate Inputs", "primary_climate_inputs")
+        nr_lbl, _   = normalise_ordinal(get("National_Relevance", "National Relevance"))
         raw_format  = get("Primary File Format", "File Format", "primary_file_format")
         raw_maint   = get("Actively Maintained", "actively_maintained")
         raw_found   = get("Foundational_to_Work", "Foundational to Work")
@@ -615,6 +664,14 @@ def read_centre(centre: str, filepath: Path, example_vals: set = None) -> list[d
             "primary_contact":      clean(raw_contact),
             "contact_email":        extract_email(raw_contact) or extract_email(get("Nominating_Person", "Nominator")),
             "asset_organization":   clean(get("Asset_Organization", "Asset Organization")),
+            # Strategy-aligned context fields
+            "primary_climate_inputs": clean(raw_inputs),
+            "climate_inputs_norm":  extract_climate_inputs(raw_inputs),
+            "output_variable_type": clean(get("Output Variable Type", "output_variable_type")),
+            "user_groups":          clean(get("User Groups", "user_groups")),
+            "cgiar_programs":       clean(get("CGIAR Programs Directly Using Asset")),
+            "partners":             clean(get("Partners or Projects Using Asset")),
+            "national_relevance":   nr_lbl,
             "actively_maintained":  yes_no(raw_maint),
             "foundational":         yes_no(raw_found),
             # Normalised category fields

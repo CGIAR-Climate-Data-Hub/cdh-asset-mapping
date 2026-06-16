@@ -120,6 +120,30 @@ def compute_stats(assets, ml):
         key=lambda a: -(a.get("priority_score") or 0),
     )
 
+    # Strategic nominations = the centres' OWN top-3 (strategy's ranking logic,
+    # not our composite). Sort by centre then submitted rank.
+    strategic = sorted(
+        [a for a in assets if a.get("is_top3_in_centre")],
+        key=lambda a: (a["centre"], a.get("asset_rank_num") or 99),
+    )
+
+    # Duplication / dependency: assets sharing the same climate inputs.
+    input_counts = Counter()
+    n_reported_inputs = 0
+    for a in assets:
+        ins = a.get("climate_inputs_norm") or []
+        if ins:
+            n_reported_inputs += 1
+        for i in ins:
+            input_counts[i] += 1
+    shared_inputs = {i: n for i, n in input_counts.items() if n >= 2}
+
+    national_counts = Counter(a.get("national_relevance") for a in assets
+                              if a.get("national_relevance"))
+    n_high_national = sum(1 for a in assets
+                          if a.get("national_relevance") in ("High", "Very High"))
+    n_cross_program = sum(1 for a in assets if a.get("cgiar_programs"))
+
     return {
         "total": total,
         "raw_total": raw_total,
@@ -148,6 +172,13 @@ def compute_stats(assets, ml):
         "centre_strength": centre_strength,
         "ingest_now": ingest_now,
         "next_cycle": next_cycle,
+        "strategic": strategic,
+        "shared_inputs": shared_inputs,
+        "input_counts": input_counts,
+        "n_reported_inputs": n_reported_inputs,
+        "national_counts": national_counts,
+        "n_high_national": n_high_national,
+        "n_cross_program": n_cross_program,
     }
 
 
@@ -187,12 +218,14 @@ def build_report_body(assets, s, figures_prefix="figures"):
     )
     W(f"")
     W(
-        f"**Headline for action:** every asset is scored on a shared 0–100 priority scale "
-        f"(portfolio mean **{s['mean_score']}**). **{len(s['ingest_now'])} assets** are ready "
-        f"to act on now — Open access, high technical readiness, priority 75+ — while "
-        f"**{len(s['next_cycle'])}** are high-value but blocked by restricted access or "
-        f"immaturity (Section 6). The clearest coverage gaps are **Adaptive Capacity** and the "
-        f"**Latin America & Caribbean** region (Section 5)."
+        f"**Headline for action:** following the mapping's design, each centre ranked its own "
+        f"assets — the **{len(s['strategic'])} strategic nominations** (each centre's top three) "
+        f"are flagged for immediate CDH consideration, with a centre-written justification "
+        f"(Section 6.2). A complementary practical cut surfaces **{len(s['ingest_now'])} assets "
+        f"ready to act on now** (open access, high technical readiness; Section 6.4). The clearest "
+        f"portfolio gaps are **Adaptive Capacity** and the **Latin America & Caribbean** region "
+        f"(Section 5). Assets also carry an optional composite score to aid sorting (Section 6.1) — "
+        f"a navigation aid, not an official ranking."
     )
     W(f"")
 
@@ -215,9 +248,18 @@ def build_report_body(assets, s, figures_prefix="figures"):
         f"use, and a readiness/nomination assessment."
     )
     W(f"")
+    W(
+        f"Consistent with the mapping strategy, the exercise is deliberately **focused and "
+        f"strategic, not exhaustive**: each centre nominated a limited set (up to ~20) of its "
+        f"strongest, most decision-relevant assets, prioritising quality and reuse over volume. It "
+        f"is **not an audit of past outputs, and not a scientific evaluation of data quality**, and "
+        f"it does not alter data ownership or impose hosting requirements. It is a coordination and "
+        f"governance step to inform Phase 1 of the Hub."
+    )
+    W(f"")
     W(f"**Objectives of the mapping:**")
     W(f"")
-    W(f"1. Establish a baseline inventory of climate data assets across the CGIAR system.")
+    W(f"1. Surface a focused, strategic set of high-value climate data assets across CGIAR (not an exhaustive inventory).")
     W(f"2. Identify gaps and priorities for Hub curation and integration.")
     W(f"3. Provide a foundation for cross-centre collaboration and data-sharing.")
     W(f"4. Inform the CDH technical roadmap for ingestion and federation.")
@@ -328,6 +370,13 @@ def build_report_body(assets, s, figures_prefix="figures"):
     W(
         f"| **Hybrid labels** | Some assets are tagged with two adjacent domains "
         f"(e.g. Sensitivity / Adaptation Analytics) where single label would be misleading. |"
+    )
+    W(f"")
+    W(
+        f"*These labels follow the mapping strategy's domain vocabulary. The strategy lists "
+        f"**Climate finance** and **Climate policy** as separate domains; given the small number "
+        f"of assets in either, this report combines them under **Climate Policy / Finance** — they "
+        f"can be split if future submissions warrant.*"
     )
     W(f"")
 
@@ -541,20 +590,47 @@ def build_report_body(assets, s, figures_prefix="figures"):
         f"pathway for each."
     )
     W(f"")
-    W(f"### 6.1 How priority is scored")
+    W(f"### 6.1 How to read priority here")
     W(f"")
     W(
-        f"Each asset carries a **composite priority score (0–100)**, computed reproducibly in "
-        f"`src/ingest.py` from a weighted average of: decision relevance (0.20), technical "
-        f"readiness (0.20), reuse potential (0.15), submitted rank within centre (0.15), "
-        f"contemporary validity (0.10), sustainability (0.10), and whether an intended Hub "
-        f"role was specified (0.10). Missing components are dropped from the average rather "
-        f"than scored as zero. The portfolio mean is **{s['mean_score']}**. The same score and "
-        f"its components drive the interactive dashboard, so the two never diverge."
+        f"The mapping strategy is deliberate that the five qualitative criteria are a "
+        f"**comparison aid, not a formal score or ranked list** — collapsing them into a single "
+        f"number would oversimplify. This report follows that intent: the authoritative signal is "
+        f"each **centre's own ranking**, and the **top three assets per centre are the strategic "
+        f"nominations** for immediate Hub consideration (Section 6.2)."
+    )
+    W(f"")
+    W(
+        f"As a navigation convenience only, each asset additionally carries an **optional "
+        f"composite score (0–100)** — a weighted blend of the five criteria, submitted rank, and "
+        f"hub-role specification, computed reproducibly in `src/ingest.py` and shared with the "
+        f"dashboard so the two never diverge. Treat it strictly as a sorting aid for long lists, "
+        f"**not as an official quality verdict**; absent criteria are dropped from the blend rather "
+        f"than penalised. Portfolio mean **{s['mean_score']}**."
     )
     W(f"")
 
-    W(f"### 6.2 Priority quadrant")
+    W(f"### 6.2 Strategic nominations — each centre's top three")
+    W(f"")
+    W(
+        f"**{len(s['strategic'])} assets** were ranked in their centre's top three. Under the "
+        f"mapping strategy these are the unit for **immediate Hub inclusion or federation**; "
+        f"lower-ranked assets are candidates for later cycles. Each top-ranked asset carries a "
+        f"centre-written justification (summarised below; full text in the asset record)."
+    )
+    W(f"")
+    W(f"| Centre | Rank | Asset | Domain | Access | Pathway | Centre justification |")
+    W(f"|---|---|---|---|---|---|---|")
+    for a in s["strategic"]:
+        name = a["name"].replace("|", "\\|")[:42]
+        why = (a.get("justification") or a.get("primary_use_case") or "").replace("|", "\\|").replace("\n", " ")[:90]
+        W(
+            f"| {centre_label(a['centre'])} | {a.get('asset_rank') or '—'} | {name} | "
+            f"{a['domain_norm']} | {a.get('access_norm', '—')} | {a.get('integration_hint', '—')} | {why} |"
+        )
+    W(f"")
+
+    W(f"### 6.3 Priority quadrant")
     W(f"")
     W(f"![Figure 7 — Priority quadrant]({fig('fig7_priority_quadrant.png', 'Figure 7')})")
     W(f"")
@@ -567,7 +643,7 @@ def build_report_body(assets, s, figures_prefix="figures"):
     )
     W(f"")
 
-    W(f"### 6.3 Suggested integration pathway")
+    W(f"### 6.4 Suggested integration pathway")
     W(f"")
     W(f"![Figure 8 — Suggested integration pathway]({fig('fig8_integration_pathway.png', 'Figure 8')})")
     W(f"")
@@ -597,7 +673,7 @@ def build_report_body(assets, s, figures_prefix="figures"):
         why = why.replace("|", "\\|").replace("\n", " ")[:80]
         return name, why
 
-    W(f"### 6.4 Act now — ready, open, high value")
+    W(f"### 6.5 Act now — ready, open, high value")
     W(f"")
     inow = s["ingest_now"]
     W(
@@ -616,7 +692,7 @@ def build_report_body(assets, s, figures_prefix="figures"):
         )
     W(f"")
 
-    W(f"### 6.5 Next cycle — high value, currently blocked")
+    W(f"### 6.6 Next cycle — high value, currently blocked")
     W(f"")
     nxt = s["next_cycle"]
     W(
@@ -636,6 +712,44 @@ def build_report_body(assets, s, figures_prefix="figures"):
             f"| {a['priority_score']} | {centre_label(a['centre'])} | {name} | "
             f"{a['domain_norm']} | {blocker} | {a.get('integration_hint', '')} |"
         )
+    W(f"")
+
+    W(f"### 6.7 Shared dependencies and reuse signals")
+    W(f"")
+    si = s["shared_inputs"]
+    if si:
+        top = sorted(si.items(), key=lambda x: -x[1])
+        lead = ", ".join(f"**{k}** ({v})" for k, v in top[:4])
+        W(
+            f"**Duplication of climate inputs.** Of the **{s['n_reported_inputs']} assets** that "
+            f"reported their underlying climate inputs, several inputs recur across multiple "
+            f"submissions — {lead}. Shared upstream inputs are prime candidates for **once-only Hub "
+            f"preprocessing** (a stated aim of the mapping: detecting duplication in climate inputs "
+            f"and pipelines) rather than each centre reprocessing the same source independently."
+        )
+        W(f"")
+        W(f"| Climate input | Assets relying on it |")
+        W(f"|---|---|")
+        for k, v in top:
+            W(f"| {k} | {v} |")
+        W(f"")
+        W(
+            f"*Only {s['n_reported_inputs']} of {s['total']} assets recorded their climate inputs; "
+            f"enforcing this field next cycle would complete the dependency picture.*"
+        )
+        W(f"")
+    W(
+        f"**Cross-programme reuse.** **{s['n_cross_program']} assets** name the CGIAR programmes "
+        f"already using them — direct evidence of reuse beyond the originating team, which the "
+        f"strategy treats as a core signal for Hub inclusion."
+    )
+    W(f"")
+    W(
+        f"**National relevance.** **{s['n_high_national']} assets** are rated High or Very High for "
+        f"national relevance — the datasets most important for country engagement, policy dialogue, "
+        f"and partner buy-in. The strategy flags these as priorities even where they are not "
+        f"globally standardised or openly accessible."
+    )
     W(f"")
 
     W(f"---")

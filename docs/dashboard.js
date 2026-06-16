@@ -38,6 +38,7 @@ const FILTER_DIMS = [
   { field: "access_norm",     label: "Access status" },
   { field: "integration_hint",label: "Integration pathway" },
   { field: "hub_role_norm",   label: "Intended hub role" },
+  { field: "national_relevance", label: "National relevance" },
 ];
 
 const state = {
@@ -47,7 +48,7 @@ const state = {
   filters: {},               // field -> Set of selected values
   search: "",
   actNowOnly: false,
-  queueTab: "now",
+  queueTab: "strategic",
   tableSort: "priority_score",
   tableDir: "desc",
   selectedCell: null,        // "domain|||geo"
@@ -469,31 +470,47 @@ function renderPathway() {
 }
 
 function renderQueueCounts() {
+  $("qStratCount").textContent = state.filtered.filter((a) => a.is_top3_in_centre).length;
   $("qNowCount").textContent = state.filtered.filter(isActNow).length;
   $("qNextCount").textContent = state.filtered.filter(isNextCycle).length;
 }
 
 function renderQueue() {
-  const now = state.queueTab === "now";
-  const list = state.filtered.filter(now ? isActNow : isNextCycle)
-    .sort((a, b) => (b.priority_score ?? 0) - (a.priority_score ?? 0));
+  const tab = state.queueTab;
+  let list;
+  if (tab === "strategic") {
+    list = state.filtered.filter((a) => a.is_top3_in_centre)
+      .sort((a, b) => a.centre.localeCompare(b.centre) || (a.asset_rank_num ?? 99) - (b.asset_rank_num ?? 99));
+  } else {
+    list = state.filtered.filter(tab === "now" ? isActNow : isNextCycle)
+      .sort((a, b) => (b.priority_score ?? 0) - (a.priority_score ?? 0));
+  }
   const host = $("actionQueue");
-  if (!list.length) { host.innerHTML = `<div class="empty">No assets match. ${now ? "Loosen filters or check Next cycle." : ""}</div>`; return; }
+  if (!list.length) {
+    const hint = tab === "strategic" ? "No top-3 nominations in this filter."
+      : tab === "now" ? "Loosen filters or check Next cycle." : "";
+    host.innerHTML = `<div class="empty">No assets match. ${hint}</div>`;
+    return;
+  }
 
   host.innerHTML = list.map((a) => {
     const why = a.justification || a.primary_use_case || a.short_description || "";
-    const blocker = now ? "" : (a.access_norm === "Restricted"
+    const lead = tab === "strategic"
+      ? `<span class="pill pill-top">★ Rank ${esc(a.asset_rank || "—")} in ${esc(a.centre)}</span>`
+      : (a.is_top3_in_centre ? '<span class="pill pill-top">top-3</span>' : "");
+    const blocker = tab === "next" ? (a.access_norm === "Restricted"
       ? `<div class="qcard-blocker">⛔ Restricted access</div>`
-      : `<div class="qcard-blocker">⛔ Readiness below High</div>`);
+      : `<div class="qcard-blocker">⛔ Readiness below High</div>`) : "";
     return `<article class="qcard" data-label="${esc(a.label)}">
-      <div class="qscore">${a.priority_score ?? "—"}<small>score</small></div>
+      <div class="qscore">${a.priority_score ?? "—"}<small>${tab === "strategic" ? "score·aid" : "score"}</small></div>
       <div>
-        <h4>${esc(a.name)}${a.is_top3_in_centre ? ' <span class="pill pill-top">top-3</span>' : ""}</h4>
+        <h4>${esc(a.name)} ${lead}</h4>
         <div class="qcard-meta">${esc(a.centre)} · ${esc(a.domain_norm)} · ${esc(a.geo_norm)}</div>
         <div class="qcard-why">${esc(why)}</div>
         <div class="qcard-pills">
           <span class="pill ${accClass(a)}">${esc(a.access_norm)}</span>
           <span class="pill">${esc(a.integration_hint)}</span>
+          ${a.national_relevance ? `<span class="pill">Nat'l: ${esc(a.national_relevance)}</span>` : ""}
         </div>${blocker}
       </div></article>`;
   }).join("");
@@ -545,7 +562,7 @@ function openDrawer(a) {
 
   $("drawerBody").innerHTML = `
     <div class="drawer-title">${esc(a.name)}</div>
-    ${a.priority_score != null ? `<div class="drawer-score">${a.priority_score}<small>/100 priority</small></div>` : ""}
+    ${a.priority_score != null ? `<div class="drawer-score" title="Optional composite — a sort aid, not an official ranking">${a.priority_score}<small>/100 · sort aid</small></div>` : ""}
     <div class="drawer-pills">
       <span class="pill ${accClass(a)}">${esc(a.access_norm)}</span>
       <span class="pill">${esc(a.integration_hint)}</span>
@@ -561,11 +578,16 @@ function openDrawer(a) {
       ${row("Geography", a.geo_norm)}${row("Submitted rank (in centre)", a.asset_rank)}</div>
     <div class="drawer-group"><h5>Scope &amp; structure</h5>
       ${row("Commodity", a.commodity)}${row("Farming system", a.farming_system)}
+      ${row("Output variable", a.output_variable_type)}${row("Climate inputs", a.primary_climate_inputs)}
       ${row("Spatial coverage", a.spatial_coverage)}${row("Spatial resolution", a.spatial_resolution)}
       ${row("Temporal type", a.temporal_type)}${row("File format", a.file_format)}
       ${row("Year last updated", a.year_last_updated)}${row("Actively maintained", yn(a.actively_maintained))}</div>
+    <div class="drawer-group"><h5>Use &amp; relevance</h5>
+      ${row("Primary use case", a.primary_use_case)}${row("User groups", a.user_groups)}
+      ${row("CGIAR programmes using", a.cgiar_programs)}${row("Partners / projects", a.partners)}
+      ${row("National relevance", a.national_relevance)}</div>
     <div class="drawer-group"><h5>Context</h5>
-      ${row("Nominator", a.nominator)}${row("Organisation", a.asset_organization)}${row("Primary use case", a.primary_use_case)}</div>
+      ${row("Nominator", a.nominator)}${row("Organisation", a.asset_organization)}</div>
     <div class="drawer-group"><h5>Access &amp; contact</h5>
       <div class="drawer-actions">
         ${a.url ? `<a class="drawer-cta" href="${esc(a.url)}" target="_blank" rel="noopener">🔗 Open data source ↗</a>`
