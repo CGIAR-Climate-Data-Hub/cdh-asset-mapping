@@ -244,43 +244,79 @@ def build_report_body(assets, s, figures_prefix="figures"):
         items = [(k, v) for k, v in sorted(d.items(), key=lambda x: -x[1]) if v]
         return ", ".join(f"**{k}** ({v})" for k, v in items[:n]) or "—"
 
-    W(f"## Executive Summary")
+    top_domains = s["domain_counts"].most_common(3)
+
+    W(f"## Who This Report Is For")
     W(f"")
     W(
-        f"The CGIAR Climate Data Hub (CDH) conducted its first system-wide mapping of climate "
-        f"data assets across CGIAR centres. **{s['total']} assets** were identified across "
-        f"**{s['n_centres']} centres**, spanning climate hazard monitoring, adaptation analytics, "
-        f"exposure mapping, mitigation accounting, and multi-domain integrated datasets."
+        f"This report turns the first system-wide mapping of CGIAR's climate data assets into "
+        f"something the Hub can act on. It is written for three audiences:"
     )
     W(f"")
+    W(f"- **CDH leadership and the Core team** — to see where the system is strong and where it is thin, and to steer Phase-1 priorities. *(Start with the Executive Summary and Section 5.)*")
+    W(f"- **The CDH development and data team** — to decide what to federate or ingest now, what to queue for later, and where effort is being duplicated. *(Section 6.)*")
+    W(f"- **Contributing centres** — to check how their assets are represented and flag corrections or additions. *(Annex A and the feedback links in the Data Access section.)*")
+    W(f"")
+    W(f"**The questions it answers**")
+    W(f"")
+    W(f"- Where is CGIAR strong, and where are the gaps — by centre, theme, and geography?")
+    W(f"- Which assets should the Hub act on now, and which belong in the next cycle?")
+    W(f"- What is openly reusable, foundational, or nationally important — and what is locked behind an access conversation?")
+    W(f"- Where are centres independently reprocessing the same upstream climate inputs?")
+    W(f"")
+    W(f"**The needs it serves**")
+    W(f"")
     W(
-        f"Of the {s['total']} catalogued assets, **{s['hub_total']} ({pct(s['hub_total'], s['total'])}%)** "
-        f"originate from the six Hub-funded centres "
-        f"({', '.join(centre_label(c) for c in sorted(HUB_FUNDED))})."
+        f"The Hub exists to reduce fragmentation in CGIAR's climate evidence base. This mapping is "
+        f"the evidence behind that effort: it prioritises a focused set of high-value assets for "
+        f"Phase-1 inclusion or federation, surfaces reusable and nationally-relevant datasets, flags "
+        f"duplicated preprocessing the Hub can do once instead of many times, and points to the "
+        f"gaps — and the centres — still to engage. It is deliberately strategic, not exhaustive "
+        f"(Section 1)."
     )
     W(f"")
 
-    top_domains = s["domain_counts"].most_common(3)
+    W(f"---")
+    W(f"")
+    W(f"## Executive Summary")
+    W(f"")
     W(
-        f"The three most represented climate domains are "
-        f"**{top_domains[0][0]}** ({top_domains[0][1]} assets), "
-        f"**{top_domains[1][0]}** ({top_domains[1][1]}), and "
-        f"**{top_domains[2][0]}** ({top_domains[2][1]}). "
-        f"Geographically, Africa ({s['geo_counts'].get('Africa', 0)} assets) and Global "
-        f"({s['geo_counts'].get('Global', 0)} assets) together account for "
-        f"{pct(s['geo_counts'].get('Africa', 0) + s['geo_counts'].get('Global', 0), s['total'])}% "
-        f"of the portfolio."
+        f"CGIAR holds a wealth of climate data — but it is scattered across centres, programmes, "
+        f"and bilateral projects: hard to find, easy to duplicate, and difficult to reuse. The "
+        f"Climate Data Hub was created to change that, and this exercise is its first concrete "
+        f"step: a structured look at the strongest climate data assets the centres themselves put "
+        f"forward."
     )
     W(f"")
     W(
-        f"**Headline for action:** following the mapping's design, each centre ranked its own "
-        f"assets — the **{len(s['strategic'])} strategic nominations** (each centre's top three) "
-        f"are flagged for immediate CDH consideration, with a centre-written justification "
-        f"(Section 6.2). A complementary practical cut surfaces **{len(s['ingest_now'])} assets "
-        f"ready to act on now** (open access, high technical readiness; Section 6.4). The clearest "
-        f"portfolio gaps are **Adaptive Capacity** and the **Latin America & Caribbean** region "
-        f"(Section 5). Assets also carry an optional composite score to aid sorting (Section 6.1) — "
-        f"a navigation aid, not an official ranking."
+        f"**{s['total']} assets from {s['n_centres']} centres** were catalogued, spanning hazard "
+        f"monitoring, adaptation analytics, exposure, mitigation accounting, and integrated "
+        f"multi-domain platforms; **{s['hub_total']} ({pct(s['hub_total'], s['total'])}%)** come "
+        f"from the six Hub-funded centres. Coverage is deepest in **{top_domains[0][0]}** and "
+        f"**{top_domains[1][0]}**, and concentrated in Africa and Global datasets."
+    )
+    W(f"")
+    W(f"Three messages stand out:")
+    W(f"")
+    W(
+        f"- **There are clear quick wins.** {len(s['ingest_now'])} assets are openly accessible, "
+        f"technically ready, and high-value — they can be federated or ingested with little "
+        f"friction (Section 6.5)."
+    )
+    W(
+        f"- **The strategic shortlist is already defined by the centres.** The "
+        f"{len(s['strategic'])} top-three nominations come with written justifications and are the "
+        f"natural candidates for immediate Hub inclusion (Section 6.2)."
+    )
+    W(
+        f"- **The gaps are specific and actionable.** Adaptive Capacity is essentially absent, "
+        f"Latin America & Caribbean and Asia are thin, and two major centres — CIMMYT and "
+        f"ICARDA — have yet to submit (Section 5; Section 7)."
+    )
+    W(f"")
+    W(
+        f"The rest of the report makes each of these concrete: where the strengths and gaps sit "
+        f"(Section 5), and exactly what to do now and next (Section 6)."
     )
     W(f"")
 
@@ -356,7 +392,8 @@ def build_report_body(assets, s, figures_prefix="figures"):
     W(
         f"Free-text fields for climate domain, asset type, and spatial coverage were normalised "
         f"to controlled vocabularies using keyword matching. The normalisation rules are documented "
-        f"in `src/ingest.py` and applied reproducibly via the pipeline described in Section 2.4."
+        f"in `src/ingest.py` and applied reproducibly by the pipeline documented in the "
+        f"**Data Access, Feedback and Reproducibility** section."
     )
     W(f"")
     W(f"### 2.3 Consolidation of duplicate entries")
@@ -368,29 +405,7 @@ def build_report_body(assets, s, figures_prefix="figures"):
         f"**{s['total']}** catalogued assets. The full merge log is in Annex C."
     )
     W(f"")
-    W(f"### 2.4 Reproducible pipeline")
-    W(f"")
-    W(
-        f"All statistics in this report are computed programmatically from the raw Excel "
-        f"submissions. Pipeline consists of three scripts:"
-    )
-    W(f"")
-    W(f"| Script | Purpose |")
-    W(f"|---|---|")
-    W(f"| `src/ingest.py` | Read Excel files, normalise fields, apply merge log → `data/normalized/assets.json` |")
-    W(f"| `src/figures.py` | Generate all figures from `assets.json` |")
-    W(f"| `src/report.py` | Generate Markdown version of report |")
-    W(f"| `report.qmd` | Generate Quarto source for HTML/PDF/Word rendering |")
-    W(f"")
-    W(f"To regenerate report after receiving new submissions:")
-    W(f"")
-    W(f"```bash")
-    W(f"python src/ingest.py && python src/figures.py && python src/report.py")
-    W(f"quarto render report.qmd --to html")
-    W(f"```")
-    W(f"")
-
-    W(f"### 2.5 Optional composite priority score")
+    W(f"### 2.4 Optional composite priority score")
     W(f"")
     W(
         f"The mapping strategy deliberately avoids reducing the five qualitative criteria to a "
@@ -432,7 +447,7 @@ def build_report_body(assets, s, figures_prefix="figures"):
     W(f"The following climate domain vocabulary is used throughout this report:")
     W(f"")
     W(f"| Domain | Definition |")
-    W(f"|---|---|")
+    W(f"|--------|----------------------------------------------------------------|")
     W(
         f"| **Hazard** | Climate variables and indices that characterise physical hazard "
         f"(e.g. rainfall, temperature, drought, flood extent). |"
@@ -481,6 +496,12 @@ def build_report_body(assets, s, figures_prefix="figures"):
     W(f"---")
     W(f"")
     W(f"## 4. Results")
+    W(f"")
+    W(
+        f"*This section describes the portfolio as a whole — how much was submitted and by whom, "
+        f"which themes and geographies it covers, who owns the assets, and what they actually "
+        f"contain. Sections 5 and 6 then turn this into strengths, gaps, and actions.*"
+    )
     W(f"")
     W(f"### 4.1 Volume and coverage")
     W(f"")
@@ -992,6 +1013,11 @@ def build_report_body(assets, s, figures_prefix="figures"):
     W(f"")
     W(f"## 7. Discussion")
     W(f"")
+    W(
+        f"*Stepping back from the numbers: what does the portfolio tell us, how far can we trust "
+        f"it, and what should happen next?*"
+    )
+    W(f"")
     W(f"### 7.1 Coverage and gaps")
     W(f"")
     W(
@@ -1109,6 +1135,21 @@ def build_report_body(assets, s, figures_prefix="figures"):
         f"rather than each centre repeating the work. Federation-first keeps stewardship with the "
         f"originating centres while still delivering cross-CGIAR discovery — the central tension the "
         f"Hub is designed to resolve."
+    )
+    W(f"")
+    W(f"### 7.4 In short")
+    W(f"")
+    W(
+        f"Returning to the questions this report set out to answer: CGIAR's catalogued climate "
+        f"data is **strong on hazard and adaptation analytics, deepest in Africa and at global "
+        f"scale, and anchored by a core of foundational, multi-programme, nationally-relevant "
+        f"datasets** — but **thin on adaptive capacity, in Latin America and Asia, and dependent "
+        f"on single centres in several domains**. For the Hub, the immediate move is clear: act on "
+        f"the {len(s['ingest_now'])} open, ready, high-value assets and the centres' "
+        f"{len(s['strategic'])} strategic nominations now; open access conversations for the "
+        f"high-value-but-restricted assets in parallel; preprocess shared climate inputs once; and "
+        f"bring CIMMYT and ICARDA into the next cycle to close the most visible gaps. The detail "
+        f"sits in Sections 5 and 6; this is the throughline."
     )
     W(f"")
 

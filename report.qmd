@@ -44,6 +44,8 @@ format:
           white-space: nowrap;
           width: 1%;
         }
+        /* Inline code (file paths) in tables must not wrap mid-path. */
+        table code { white-space: nowrap; }
         /* The wide text column should wrap and absorb remaining width. */
         table td:last-child, table th:last-child {
           white-space: normal;

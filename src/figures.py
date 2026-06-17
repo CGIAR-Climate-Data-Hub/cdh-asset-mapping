@@ -168,7 +168,7 @@ def fig2_climate_domains(assets):
     values  = [counts[d] for d in domains]
     colours = [DOMAIN_COLOURS.get(d, GREY_MED) for d in domains]
 
-    fig, ax = plt.subplots(figsize=(9, 5))
+    fig, ax = plt.subplots(figsize=(8, 4.4))
     bars = ax.barh(domains[::-1], values[::-1], color=colours[::-1],
                    height=0.65, edgecolor="none")
     ax.bar_label(bars, padding=4, fontsize=9, color="#333333")
@@ -195,7 +195,7 @@ def fig3_asset_types(assets):
     pct     = [v / sum(values) * 100 for v in values]
     colours = [PROGRAM_BLUE, PROGRAM_BLUE_LT, TEAL, GREY_MED][:len(labels)]
 
-    fig, ax = plt.subplots(figsize=(6, 3.5))
+    fig, ax = plt.subplots(figsize=(8, 3.0))
     bars = ax.barh(labels[::-1], values[::-1], color=colours[::-1],
                    height=0.55, edgecolor="none")
     for bar, p in zip(bars, pct[::-1]):
@@ -224,7 +224,7 @@ def fig4_geographic_coverage(assets):
     values = [counts[g] for g in labels]
     colours = [PROGRAM_BLUE, PROGRAM_BLUE_LT, TEAL, CGIAR_GREEN, GREY_MED][:len(labels)]
 
-    fig, ax = plt.subplots(figsize=(7, 3.8))
+    fig, ax = plt.subplots(figsize=(8, 3.0))
     bars = ax.barh(labels[::-1], values[::-1], color=colours[::-1],
                    height=0.6, edgecolor="none")
     ax.bar_label(bars, padding=4, fontsize=9, color="#333333")
@@ -276,7 +276,7 @@ def fig5_heatmap(assets):
         "Mitigation": "Mitigation", "Hazard / Climate Services": "Hazard /\nClim. Svc",
         "Sensitivity": "Sensitivity", "Adaptive Capacity": "Adaptive\nCapacity",
     }
-    fig, ax = plt.subplots(figsize=(8.8, 4.7))
+    fig, ax = plt.subplots(figsize=(8.0, 4.6))
     _heatmap(ax, matrix, [c.replace("_", "-") for c in centres_ordered],
              [SHORT.get(d, d) for d in HEATMAP_DOMAINS], zero_dot=False)
     fig.tight_layout()
@@ -374,7 +374,7 @@ def fig8_integration_pathway(assets):
     values = [counts[l] for l in labels]
     colours = [COLOURS[l] for l in labels]
 
-    fig, ax = plt.subplots(figsize=(8, 3.6))
+    fig, ax = plt.subplots(figsize=(8, 3.0))
     bars = ax.barh(labels[::-1], values[::-1], color=colours[::-1],
                    height=0.62, edgecolor="none")
     total = sum(values)
