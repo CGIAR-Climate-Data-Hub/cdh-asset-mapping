@@ -38,19 +38,8 @@ format:
           vertical-align: top;
           line-height: 1.3;
         }
-        /* Collapse the leading label/numeric column (Domain, Centre, #, Rank)
-           to its content width, leaving the rest for the wide text column. */
-        table td:first-child, table th:first-child {
-          white-space: nowrap;
-          width: 1%;
-        }
         /* Inline code (file paths) in tables must not wrap mid-path. */
         table code { white-space: nowrap; }
-        /* The wide text column should wrap and absorb remaining width. */
-        table td:last-child, table th:last-child {
-          white-space: normal;
-          width: auto;
-        }
         /* Figure captions: tighter, smaller, secondary to the plot. */
         figure figcaption, .figure-caption, p > img + em {
           font-size: 0.82rem;
@@ -114,13 +103,15 @@ def _link(a):
 def _why(a, n=300):
     return (a.get("justification") or a.get("primary_use_case") or a.get("short_description") or "")[:n]
 
-def itab(df, page=100):
-    # No horizontal scroll: fit the page width and let text wrap. Show up to
-    # `page` rows per page (tables 1 & 2 fit on one page); pager only if longer.
+def itab(df, page=100, widths=None):
+    # Fixed layout + explicit per-column widths so short columns (Rank, Access)
+    # stay narrow and the long text column gets the space — no wasted whitespace,
+    # no horizontal scroll. `widths` is a list of CSS widths, one per column.
+    cdefs = [{"width": w, "targets": i} for i, w in enumerate(widths)] if widths else None
     show(df, classes="display compact", column_filters="header",
          paging=len(df) > page, lengthMenu=[page, 25, 50],
-         scrollX=False, autoWidth=False, style="width:100%",
-         maxBytes=0, showIndex=False)
+         scrollX=False, autoWidth=False, style="width:100%; table-layout:fixed;",
+         columnDefs=cdefs, maxBytes=0, showIndex=False)
 
 # ---- Tooltip enrichment helpers --------------------------------------------
 # Tooltips should ADD what isn't already visible on the chart (which centres,
@@ -397,7 +388,7 @@ display(Markdown(seg[6]))
 ::: {.content-visible when-format="html"}
 ```{python}
 #| echo: false
-itab(df_strategic)
+itab(df_strategic, widths=["9%", "5%", "28%", "15%", "10%", "33%"])
 ```
 :::
 ::: {.content-visible unless-format="html"}
@@ -489,7 +480,7 @@ display(Markdown(seg[9]))
 ::: {.content-visible when-format="html"}
 ```{python}
 #| echo: false
-itab(df_actnow)
+itab(df_actnow, widths=["9%", "27%", "15%", "6%", "14%", "29%"])
 ```
 :::
 ::: {.content-visible unless-format="html"}
@@ -509,7 +500,7 @@ display(Markdown(seg[10]))
 ::: {.content-visible when-format="html"}
 ```{python}
 #| echo: false
-itab(df_annexa)
+itab(df_annexa, widths=["9%", "25%", "13%", "12%", "11%", "6%", "9%", "15%"])
 ```
 :::
 ::: {.content-visible unless-format="html"}
