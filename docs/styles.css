@@ -330,6 +330,17 @@ tbody tr:hover { background: var(--blue-soft); }
 .seg { border: 0; background: none; padding: .35rem .8rem; border-radius: 7px; font-weight: 600; font-size: .82rem; color: var(--muted); cursor: pointer; }
 .seg.is-active { background: #fff; color: var(--ink); box-shadow: var(--shadow); }
 
+/* ---------- Dimension selectors (flows + action plots) ---------- */
+.flow-controls { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; padding: .3rem .1rem .6rem; }
+.fc-label, .fc-arrow { font-size: .8rem; color: var(--muted); font-weight: 600; }
+.fc-arrow { color: var(--blue); }
+.fc-select {
+  font: inherit; font-size: .82rem; font-weight: 600; color: var(--ink);
+  background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+  padding: .3rem .55rem; cursor: pointer;
+}
+.fc-select:hover { border-color: var(--blue); }
+
 /* ---------- Flows view ---------- */
 .flow-legend { padding: .2rem .1rem .7rem; }
 .flow-canvas { width: 100%; min-height: 520px; }

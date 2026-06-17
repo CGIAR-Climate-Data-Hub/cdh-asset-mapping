@@ -51,6 +51,10 @@ const state = {
   queueTab: "strategic",
   quadMode: "quadrant",      // Action priority plot: "quadrant" | "beeswarm"
   flowMode: "sankey",        // Flows view: "sankey" | "network"
+  sankeyDims: ["centre", "domain_norm", "integration_hint"],  // 2–3 stages
+  netDims: ["centre", "domain_norm"],                          // two groups
+  quadX: "technical_readiness", quadY: "reuse_potential",      // quadrant axes
+  swarmX: "priority_score", swarmLane: "access_norm",          // beeswarm axis + lane
   tableSort: "priority_score",
   tableDir: "desc",
   selectedCell: null,        // "domain|||geo"
@@ -465,16 +469,58 @@ const quickWinShade = {
   },
 };
 
+/* Selectable axes for the Action plots. Quadrant axes are the 0–1 quality
+   components; the beeswarm X can also be the 0–100 priority score, and its
+   lanes can be any low-cardinality categorical field. */
+const COMP_DIMS = [
+  { key: "technical_readiness", label: "Technical readiness" },
+  { key: "reuse_potential", label: "Reuse potential" },
+  { key: "decision_relevance", label: "Decision relevance" },
+  { key: "contemporary_validity", label: "Contemporary validity" },
+  { key: "sustainability", label: "Sustainability" },
+];
+const SWARM_X = [{ key: "priority_score", label: "Priority score", max: 100 },
+  ...COMP_DIMS.map((c) => ({ ...c, max: 1 }))];
+const SWARM_LANE_DIMS = ["access_norm", "integration_hint", "hub_role_norm", "type_norm", "domain_norm"];
+const compLabel = (k) => COMP_DIMS.find((c) => c.key === k)?.label || k;
+const swarmXVal = (a, key) => key === "priority_score" ? a.priority_score : a.sc[key];
+
+function buildPriCtrls() {
+  const host = $("priCtrls"); if (!host) return;
+  if (state.quadMode === "beeswarm") {
+    host.innerHTML = `<span class="fc-label">X axis</span>${priSelect("swX", state.swarmX, SWARM_X.map((d) => [d.key, d.label]))}` +
+      `<span class="fc-label">lanes</span>${priSelect("swL", state.swarmLane, SWARM_LANE_DIMS.map((f) => [f, dimLabel(f)]))}`;
+  } else {
+    host.innerHTML = `<span class="fc-label">X axis</span>${priSelect("qX", state.quadX, COMP_DIMS.map((d) => [d.key, d.label]), [state.quadY])}` +
+      `<span class="fc-label">Y axis</span>${priSelect("qY", state.quadY, COMP_DIMS.map((d) => [d.key, d.label]), [state.quadX])}`;
+  }
+  host.querySelectorAll("select").forEach((s) => s.addEventListener("change", onPriDimChange));
+}
+function priSelect(id, value, pairs, taken) {
+  const opts = pairs.map(([k, l]) => {
+    const dis = taken && taken.includes(k) && k !== value;
+    return `<option value="${k}" ${k === value ? "selected" : ""} ${dis ? "disabled" : ""}>${esc(l)}</option>`;
+  }).join("");
+  return `<select class="fc-select" id="pc_${id}">${opts}</select>`;
+}
+function onPriDimChange() {
+  if (state.quadMode === "beeswarm") { state.swarmX = $("pc_swX").value; state.swarmLane = $("pc_swL").value; }
+  else { state.quadX = $("pc_qX").value; state.quadY = $("pc_qY").value; }
+  renderQuadrant();
+}
+
 function renderQuadrant() {
+  buildPriCtrls();
   $("quadLegend").innerHTML = Object.entries(ACCESS_COL).map(([k, v]) =>
     `<span><span class="dot" style="background:${v}"></span>${k}</span>`).join("");
   if (state.quadMode === "beeswarm") return renderBeeswarm();
 
+  const xf = state.quadX, yf = state.quadY, lx = compLabel(xf), ly = compLabel(yf);
   $("priPlotSub").textContent =
-    "Technical readiness × reuse potential. Bubble size = decision relevance · colour = access. Click a point for detail.";
+    `${lx} × ${ly}. Bubble size = decision relevance · colour = access. Click a point for detail.`;
   const pts = { Open: [], Restricted: [], Unknown: [] };
   state.filtered.forEach((a) => {
-    const x = a.sc.technical_readiness, y = a.sc.reuse_potential;
+    const x = a.sc[xf], y = a.sc[yf];
     if (x == null || y == null) return;
     const r = 4 + (a.sc.decision_relevance ?? 0.5) * 11;
     (pts[a.access_norm] || pts.Unknown).push({
@@ -497,8 +543,8 @@ function renderQuadrant() {
       layout: { padding: { right: 6 } },
       onClick: (_, els) => { if (els.length) { const d = state.charts.quadrant.data.datasets[els[0].datasetIndex].data[els[0].index]; openDrawer(d.asset); } },
       scales: {
-        x: { min: 0.15, max: 1.05, title: { display: true, text: "Technical readiness →", color: "#6B7B88", font: { size: 11 } }, grid: { color: "#EEF2F7" }, ticks: { font: { size: 10 } } },
-        y: { min: 0.15, max: 1.05, title: { display: true, text: "Reuse potential →", color: "#6B7B88", font: { size: 11 } }, grid: { color: "#EEF2F7" }, ticks: { font: { size: 10 } } },
+        x: { min: 0.15, max: 1.05, title: { display: true, text: `${lx} →`, color: "#6B7B88", font: { size: 11 } }, grid: { color: "#EEF2F7" }, ticks: { font: { size: 10 } } },
+        y: { min: 0.15, max: 1.05, title: { display: true, text: `${ly} →`, color: "#6B7B88", font: { size: 11 } }, grid: { color: "#EEF2F7" }, ticks: { font: { size: 10 } } },
       },
       plugins: {
         legend: { display: false },
@@ -508,28 +554,32 @@ function renderQuadrant() {
   });
 }
 
-/* Beeswarm: x = priority score, points dodged into lanes by access so dense
-   clusters never overlap — every asset is individually hoverable/clickable.
-   Solves the bubble-pileup problem in the quadrant view. */
-const SWARM_LANES = ["Open", "Restricted", "Unknown"];
+/* Beeswarm: chosen X axis, points dodged into lanes (chosen categorical) so
+   dense clusters never overlap — every asset is individually clickable. */
 function renderBeeswarm() {
+  const xf = state.swarmX, lf = state.swarmLane;
+  const xMeta = SWARM_X.find((d) => d.key === xf) || SWARM_X[0];
+  const xLabel = xMeta.label, xMax = xMeta.max, binW = xMax > 2 ? 3 : 0.04;
   $("priPlotSub").textContent =
-    "Every asset as one dot · x = priority score (sort aid) · lane = access. Dots are spread so none overlap — click any for detail.";
-  const laneBase = { Open: 3, Restricted: 2, Unknown: 1 };
-  const datasets = SWARM_LANES.map((acc) => {
+    `Every asset as one dot · x = ${xLabel.toLowerCase()} · lane = ${dimLabel(lf).toLowerCase()}. Dots spread so none overlap — click any for detail.`;
+  const lanes = orderValues(lf, [...new Set(state.filtered.map((a) => a[lf] || "Not specified"))]);
+  const laneIndex = new Map(lanes.map((v, i) => [v, lanes.length - i]));  // top lane = first
+  const datasets = lanes.map((lv) => {
+    const base = laneIndex.get(lv);
     const items = state.filtered
-      .filter((a) => a.access_norm === acc && a.priority_score != null)
-      .sort((p, q) => p.priority_score - q.priority_score);
-    // bin by score, stack alternately above/below the lane centre
-    const binW = 3, counts = {}, data = [];
+      .filter((a) => (a[lf] || "Not specified") === lv && swarmXVal(a, xf) != null)
+      .sort((p, q) => swarmXVal(p, xf) - swarmXVal(q, xf));
+    const counts = {}, data = [];
     items.forEach((a) => {
-      const b = Math.round(a.priority_score / binW);
-      const k = (counts[b] = (counts[b] || 0) + 1) - 1;  // 0-based within bin
-      const off = Math.ceil(k / 2) * 0.16 * (k % 2 ? 1 : -1);  // 0, +.16, -.16, +.32…
-      data.push({ x: a.priority_score, y: laneBase[acc] + off, asset: a });
+      const xv = swarmXVal(a, xf);
+      const b = Math.round(xv / binW);
+      const k = (counts[b] = (counts[b] || 0) + 1) - 1;
+      const off = Math.ceil(k / 2) * 0.16 * (k % 2 ? 1 : -1);
+      data.push({ x: xv, y: base + off, asset: a });
     });
-    return { label: acc, data, backgroundColor: hexA(ACCESS_COL[acc], 0.7), borderColor: "#fff", borderWidth: 1,
-      hoverBackgroundColor: ACCESS_COL[acc], hoverBorderColor: COL.green, hoverBorderWidth: 2, pointRadius: 6, pointHoverRadius: 8 };
+    const col = dimColor(lf, lv);
+    return { label: lv, data, backgroundColor: hexA(col, 0.7), borderColor: "#fff", borderWidth: 1,
+      hoverBackgroundColor: col, hoverBorderColor: COL.green, hoverBorderWidth: 2, pointRadius: 6, pointHoverRadius: 8 };
   }).filter((d) => d.data.length);
   replaceChart("quadrant", {
     type: "scatter",
@@ -538,10 +588,10 @@ function renderBeeswarm() {
       responsive: true, maintainAspectRatio: false,
       onClick: (_, els) => { if (els.length) { const d = state.charts.quadrant.data.datasets[els[0].datasetIndex].data[els[0].index]; openDrawer(d.asset); } },
       scales: {
-        x: { min: 0, max: 100, title: { display: true, text: "Priority score (sort aid) →", color: "#6B7B88", font: { size: 11 } }, grid: { color: "#EEF2F7" }, ticks: { font: { size: 10 } } },
-        y: { min: 0.3, max: 3.7, grid: { display: false },
-          ticks: { stepSize: 1, font: { size: 11 }, color: COL.green,
-            callback: (v) => ({ 1: "Unknown", 2: "Restricted", 3: "Open" }[v] || "") } },
+        x: { min: 0, max: xMax === 100 ? 100 : 1.05, title: { display: true, text: `${xLabel} →`, color: "#6B7B88", font: { size: 11 } }, grid: { color: "#EEF2F7" }, ticks: { font: { size: 10 } } },
+        y: { min: 0.3, max: lanes.length + 0.7, grid: { display: false },
+          ticks: { stepSize: 1, font: { size: 11 }, color: COL.green, autoSkip: false,
+            callback: (v) => lanes[lanes.length - v] || "" } },
       },
       plugins: {
         legend: { display: false },
@@ -616,11 +666,10 @@ function renderQueue() {
 
 /* ================= FLOWS =================
    Two relational views the static report can't show, both driven by the
-   current filter:
-     · Sankey  — how each centre's assets flow Centre → Domain → Pathway.
-     · Network — assets linked when they share ≥2 climate input variables;
-                 multi-colour clusters = several centres building on the same
-                 inputs → a consolidation / shared-service opportunity. */
+   current filter and by user-chosen dimensions (selectors above the canvas):
+     · Sankey  — assets flowing across 2–3 chosen categorical dimensions.
+     · Network — bipartite of two chosen dimensions; values linked when assets
+                 share both (coordination targets vs concentration risk). */
 function renderFlows() {
   if (state.netSim) { state.netSim.stop(); state.netSim = null; }
   const host = $("flowCanvas");
@@ -628,6 +677,7 @@ function renderFlows() {
   const empty = !state.filtered.length;
   $("flowEmpty").hidden = !empty;
   host.hidden = empty;
+  buildFlowControls();
   if (empty) { $("flowLegend").innerHTML = ""; return; }
   if (typeof d3 === "undefined") { host.innerHTML = `<div class="empty">Flow library failed to load (offline?).</div>`; return; }
   if (state.flowMode === "network") renderNetwork(host);
@@ -639,30 +689,84 @@ function flowDims(host) {
   return { w, h: state.flowMode === "network" ? 560 : 520 };
 }
 
-/* ---- Sankey: Centre → Domain → Pathway ---- */
+/* ---- user-chosen dimensions ---- */
+// The sensible categorical fields to flow/connect by (reuse the curated rail dims).
+function dimLabel(field) { return FILTER_DIMS.find((d) => d.field === field)?.label || field; }
+
+function buildFlowControls() {
+  const host = $("flowControls");
+  if (state.flowMode === "network") {
+    const [a, b] = state.netDims;
+    host.innerHTML = `<span class="fc-label">Connect</span>${flowSelect("net0", a, [b])}` +
+      `<span class="fc-label">with</span>${flowSelect("net1", b, [a])}`;
+  } else {
+    const [s0, s1, s2] = [state.sankeyDims[0], state.sankeyDims[1], state.sankeyDims[2] || ""];
+    host.innerHTML = `<span class="fc-label">Flow</span>${flowSelect("sk0", s0, [s1, s2])}` +
+      `<span class="fc-arrow">→</span>${flowSelect("sk1", s1, [s0, s2])}` +
+      `<span class="fc-arrow">→</span>${flowSelect("sk2", s2, [s0, s1], true)}`;
+  }
+  host.querySelectorAll("select").forEach((sel) => sel.addEventListener("change", onFlowDimChange));
+}
+function flowSelect(id, value, taken, allowNone) {
+  const opts = (allowNone ? `<option value="">(none)</option>` : "") +
+    FILTER_DIMS.map((d) => {
+      const dis = taken.includes(d.field) && d.field !== value;
+      return `<option value="${d.field}" ${d.field === value ? "selected" : ""} ${dis ? "disabled" : ""}>${esc(d.label)}</option>`;
+    }).join("");
+  return `<select class="fc-select" id="fc_${id}">${opts}</select>`;
+}
+function onFlowDimChange() {
+  if (state.flowMode === "network") {
+    state.netDims = [$("fc_net0").value, $("fc_net1").value];
+  } else {
+    state.sankeyDims = [$("fc_sk0").value, $("fc_sk1").value, $("fc_sk2").value].filter(Boolean);
+  }
+  renderFlows();
+}
+
+/* Stable colour for any dimension value (special palettes for the dims that
+   carry meaning; hashed palette otherwise so values stay visually distinct). */
+const _palMemo = {};
+function palette(key) {
+  if (_palMemo[key] == null) {
+    let h = 0;
+    for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+    _palMemo[key] = SEG_COLORS[h % SEG_COLORS.length];
+  }
+  return _palMemo[key];
+}
+function dimColor(field, value) {
+  if (field === "centre") return centreColor(value);
+  if (field === "integration_hint") return PATHWAY.find((p) => p.key === value)?.col || COL.unknown;
+  if (field === "access_norm") return ACCESS_COL[value] || COL.unknown;
+  return palette(`${field}::${value}`);
+}
+
+/* ---- Sankey: user-chosen stages (2–3 categorical dimensions) ---- */
 function renderSankey(host) {
-  $("flowTitle").textContent = "Portfolio flows — centre → domain → integration pathway";
-  $("flowSub").textContent = "How each centre's assets flow into themes and what happens to them next. Reflects the current filter. Hover a band for counts; click a node to filter.";
+  const dims = state.sankeyDims.filter(Boolean);
+  $("flowTitle").textContent = `Flows — ${dims.map(dimLabel).join(" → ").toLowerCase()}`;
+  $("flowSub").textContent = "Assets flowing across the chosen dimensions (current filter). Hover a node to trace its flow; click to filter Explore. Change the columns with the selectors above.";
+  if (dims.length < 2) { host.innerHTML = `<div class="empty">Pick at least two dimensions to flow between.</div>`; $("flowLegend").innerHTML = ""; return; }
   const { w, h } = flowDims(host);
   const nodes = [], index = new Map();
-  const nodeKey = (kind, name) => `${kind}:${name}`;
-  function node(kind, name, field) {
-    const k = nodeKey(kind, name);
-    if (!index.has(k)) { index.set(k, nodes.length); nodes.push({ name, kind, field }); }
+  function node(stage, field, name) {
+    const k = `${stage}:${name}`;
+    if (!index.has(k)) { index.set(k, nodes.length); nodes.push({ name, stage, field }); }
     return index.get(k);
   }
   const linkMap = new Map();
-  const addLink = (s, t, key) => {
+  const addLink = (s, t) => {
+    const key = `${s}-${t}`;
     let l = linkMap.get(key);
     if (!l) { l = { source: s, target: t, value: 0 }; linkMap.set(key, l); }
     l.value++;
   };
   state.filtered.forEach((a) => {
-    const c = node("centre", a.centre, "centre");
-    const d = node("domain", a.domain_norm, "domain_norm");
-    const p = node("pathway", a.integration_hint, "integration_hint");
-    addLink(c, d, `c${c}-d${d}`);
-    addLink(d, p, `d${d}-p${p}`);
+    const vals = dims.map((f) => a[f] || "Not specified");
+    for (let i = 0; i < dims.length - 1; i++) {
+      addLink(node(i, dims[i], vals[i]), node(i + 1, dims[i + 1], vals[i + 1]));
+    }
   });
   const links = [...linkMap.values()];
 
@@ -672,13 +776,9 @@ function renderSankey(host) {
   const graph = sankey({ nodes: nodes.map((n) => ({ ...n })), links: links.map((l) => ({ ...l })) });
 
   const svg = d3.select(host).append("svg").attr("width", w).attr("height", h).attr("class", "flow-svg");
-  const pathColor = (n) => PATHWAY.find((p) => p.key === n.name)?.col || COL.unknown;
-  const nodeColor = (n) => n.kind === "centre" ? centreColor(n.name)
-    : n.kind === "pathway" ? pathColor(n) : COL.blue;
-  // Left half (centre→domain) carries the centre colour; right half
-  // (domain→pathway) carries the PATHWAY colour so federate/negotiate/etc.
-  // read as meaning, not a wall of identical blue.
-  const linkColor = (l) => l.source.kind === "centre" ? centreColor(l.source.name) : pathColor(l.target);
+  const nodeColor = (n) => dimColor(n.field, n.name);
+  // Ribbon carries its source node's colour, so every column reads as colour.
+  const linkColor = (l) => dimColor(l.source.field, l.source.name);
   const LINK_OP = 0.4;
 
   const linkSel = svg.append("g").attr("fill", "none").selectAll("path")
@@ -720,45 +820,50 @@ function renderSankey(host) {
     .attr("class", "flow-nodelabel")
     .text((d) => (d.y1 - d.y0) > 9 ? d.name : "");
 
-  $("flowLegend").innerHTML =
-    `<span><span class="dot" style="background:${COL.blue}"></span>domain</span>` +
-    `<span class="flow-hint">centre = own colour · ribbon to pathway colour-coded:</span>` +
-    PATHWAY.map((p) => `<span><span class="dot" style="background:${p.col}"></span>${esc(p.key)}</span>`).join("");
+  // Legend: name each column; show the meaning-bearing palettes if present.
+  const parts = dims.map((f, i) => `<span class="flow-stat">${i + 1}. ${esc(dimLabel(f))}</span>`);
+  if (dims.includes("integration_hint"))
+    parts.push(...PATHWAY.map((p) => `<span><span class="dot" style="background:${p.col}"></span>${esc(p.key)}</span>`));
+  else if (dims.includes("access_norm"))
+    parts.push(...Object.entries(ACCESS_COL).map(([k, v]) => `<span><span class="dot" style="background:${v}"></span>${esc(k)}</span>`));
+  parts.push(`<span class="flow-hint">ribbon colour follows the left column</span>`);
+  $("flowLegend").innerHTML = parts.join("");
 }
 
-/* ---- Network: centre ↔ domain bipartite ----
-   Centres and domains as nodes; an edge means a centre has assets in that
-   domain (width = how many). A domain pulled by several centres is a hub
-   coordination target; a domain hanging off one centre is concentration
-   risk. A relational angle the report's static matrix can't give. */
+/* ---- Network: bipartite of two user-chosen dimensions ----
+   Two values are linked when assets share both. A right-side value pulled by
+   many left-side values is a coordination target; one with a single link is
+   concentration risk. A relational angle the report's static matrix can't give. */
 function renderNetwork(host) {
-  $("flowTitle").textContent = "Collaboration network — which centres cover which domains";
-  $("flowSub").textContent = "Centres (coloured) and domains (dark) linked when a centre holds assets in that domain; line thickness = how many. Domains pulled by several centres are coordination targets; domains hanging off one centre are concentration risk. Hover or click a node to trace it; double-click to filter Explore.";
+  const [fa, fb] = state.netDims;
+  if (!fa || !fb || fa === fb) { host.innerHTML = `<div class="empty">Pick two different dimensions to connect.</div>`; $("flowLegend").innerHTML = ""; return; }
+  const la = dimLabel(fa), lb = dimLabel(fb);
+  $("flowTitle").textContent = `Network — ${la.toLowerCase()} ↔ ${lb.toLowerCase()}`;
+  $("flowSub").textContent = `${la} and ${lb} values, linked when assets share both; line thickness = how many. A ${lb.toLowerCase()} pulled by several ${la.toLowerCase()} values is a coordination target; one with a single link is concentration risk. Hover or click a node to trace it; double-click to filter Explore.`;
   const { w, h } = flowDims(host);
 
-  const edgeMap = new Map();   // "centre|||domain" -> count
-  const cTot = {}, dTot = {}, dCentres = {};
+  const edgeMap = new Map();   // "aVal|||bVal" -> count
+  const aTot = {}, bTot = {}, bGroups = {};
   state.filtered.forEach((a) => {
-    const c = a.centre, dm = a.domain_norm;
-    const k = `${c}|||${dm}`;
-    edgeMap.set(k, (edgeMap.get(k) || 0) + 1);
-    cTot[c] = (cTot[c] || 0) + 1;
-    dTot[dm] = (dTot[dm] || 0) + 1;
-    (dCentres[dm] ||= new Set()).add(c);
+    const av = a[fa] || "Not specified", bv = a[fb] || "Not specified";
+    edgeMap.set(`${av}|||${bv}`, (edgeMap.get(`${av}|||${bv}`) || 0) + 1);
+    aTot[av] = (aTot[av] || 0) + 1;
+    bTot[bv] = (bTot[bv] || 0) + 1;
+    (bGroups[bv] ||= new Set()).add(av);
   });
   const nodes = [], nIdx = new Map();
-  const addNode = (kind, name, field) => {
-    const id = `${kind}:${name}`;
+  const addNode = (side, field, name) => {
+    const id = `${side}:${name}`;
     if (!nIdx.has(id)) {
-      const tot = (kind === "centre" ? cTot[name] : dTot[name]) || 0;
+      const tot = (side === "a" ? aTot[name] : bTot[name]) || 0;
       nIdx.set(id, nodes.length);
-      nodes.push({ id, kind, name, field, tot, r: 7 + Math.sqrt(tot) * 3.2 });
+      nodes.push({ id, side, field, name, tot, r: 7 + Math.sqrt(tot) * 3.2 });
     }
     return nIdx.get(id);
   };
   const links = [...edgeMap.entries()].map(([k, v]) => {
-    const [c, dm] = k.split("|||");
-    return { source: addNode("centre", c, "centre"), target: addNode("domain", dm, "domain_norm"), v };
+    const [av, bv] = k.split("|||");
+    return { source: addNode("a", fa, av), target: addNode("b", fb, bv), v };
   });
 
   const svg = d3.select(host).append("svg").attr("width", w).attr("height", h).attr("class", "flow-svg");
@@ -782,9 +887,9 @@ function renderNetwork(host) {
   const g = svg.append("g").selectAll("g").data(nodes).join("g").style("cursor", "pointer")
     .on("mouseenter", (e, d) => { if (!focus) paint(d); })
     .on("mousemove", (e, d) => showTip(
-      d.kind === "centre"
+      d.side === "a"
         ? `<b>${esc(d.name)}</b><br>${d.tot} asset${d.tot > 1 ? "s" : ""}`
-        : `<b>${esc(d.name)}</b><br>${d.tot} asset${d.tot > 1 ? "s" : ""} · ${dCentres[d.name]?.size || 0} centre${(dCentres[d.name]?.size || 0) > 1 ? "s" : ""}`, e))
+        : `<b>${esc(d.name)}</b><br>${d.tot} asset${d.tot > 1 ? "s" : ""} · ${bGroups[d.name]?.size || 0} ${esc(la.toLowerCase())} value${(bGroups[d.name]?.size || 0) > 1 ? "s" : ""}`, e))
     .on("mouseleave", () => { hideTip(); if (!focus) paint(null); })
     // Single click pins/unpins focus IN PLACE (no tab jump); double-click filters.
     .on("click", (e, d) => { e.stopPropagation(); focus = focus === d ? null : d; paint(focus); })
@@ -792,13 +897,13 @@ function renderNetwork(host) {
   svg.on("click", () => { focus = null; paint(null); });
   g.append("circle")
     .attr("r", (d) => d.r)
-    .attr("fill", (d) => d.kind === "centre" ? centreColor(d.name) : COL.green)
+    .attr("fill", (d) => dimColor(d.field, d.name))
     .attr("stroke", "#fff").attr("stroke-width", 1.5);
   g.append("text")
     .attr("class", "flow-nodelabel")
     .attr("text-anchor", "middle")
     .attr("dy", (d) => d.r + 12)
-    .text((d) => d.kind === "domain" || d.tot >= 8 ? d.name : "");
+    .text((d) => d.side === "b" || d.tot >= 8 ? d.name : "");
 
   // Brighten a node + its neighbours and incident links; fade the rest.
   function paint(n) {
@@ -824,13 +929,12 @@ function renderNetwork(host) {
     .on("drag", (e, d) => { d.fx = e.x; d.fy = e.y; })
     .on("end", (e, d) => { if (!e.active) sim.alphaTarget(0); d.fx = null; d.fy = null; }));
 
-  const multi = Object.values(dCentres).filter((s) => s.size >= 3).length;
-  const solo = Object.values(dCentres).filter((s) => s.size === 1).length;
+  const multi = Object.values(bGroups).filter((s) => s.size >= 3).length;
+  const solo = Object.values(bGroups).filter((s) => s.size === 1).length;
   $("flowLegend").innerHTML =
-    `<span><span class="dot" style="background:${COL.blue}"></span>centre</span>` +
-    `<span><span class="dot" style="background:${COL.green}"></span>domain</span>` +
-    `<span class="flow-stat">${multi} domain${multi === 1 ? "" : "s"} span ≥3 centres</span>` +
-    `<span class="flow-stat">${solo} on a single centre</span>` +
+    `<span class="flow-stat">${la} ↔ ${lb}</span>` +
+    `<span class="flow-stat">${multi} ${esc(lb.toLowerCase())} value${multi === 1 ? "" : "s"} span ≥3</span>` +
+    `<span class="flow-stat">${solo} on a single link</span>` +
     `<span class="flow-hint">node size = assets · click to trace · double-click to filter · drag to reposition</span>`;
 }
 
