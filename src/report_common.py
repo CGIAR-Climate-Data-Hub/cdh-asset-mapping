@@ -1338,7 +1338,7 @@ def build_report_body(assets, s, figures_prefix="figures"):
 REPO_URL = "https://github.com/CGIAR-Climate-Data-Hub/cdh-asset-mapping"
 # Set this to the published Microsoft Form URL once created (see FEEDBACK.md).
 # When empty, the report falls back to the GitHub issue links only.
-FEEDBACK_FORM_URL = ""
+FEEDBACK_FORM_URL = "https://forms.office.com/e/ggzDBUqymB"
 
 
 def _linkify_crossrefs(lines):
