@@ -447,7 +447,7 @@ def build_report_body(assets, s, figures_prefix="figures"):
     W(f"The following climate domain vocabulary is used throughout this report:")
     W(f"")
     W(f"| Domain | Definition |")
-    W(f"|--------|----------------------------------------------------------------|")
+    W(f"|----------------------|----------------------------------------------------------|")
     W(
         f"| **Hazard** | Climate variables and indices that characterise physical hazard "
         f"(e.g. rainfall, temperature, drought, flood extent). |"

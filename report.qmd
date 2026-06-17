@@ -50,6 +50,9 @@ format:
   pdf:
     toc: true
     number-sections: false
+    include-in-header:
+      text: |
+        \usepackage{pdflscape}
   docx:
     toc: true
     number-sections: false
@@ -78,7 +81,6 @@ from report_common import build_report_body, compute_stats, load
 
 assets, merge_log = load()
 stats = compute_stats(assets, merge_log)
-init_notebook_mode(all_interactive=True)
 
 # ---- Shared report styling -------------------------------------------------
 INK, GREEN, BLUE, BLUE_LT = "#0F1F2B", "#033529", "#1955A6", "#63A9FE"
@@ -170,6 +172,15 @@ df_annexa = pd.DataFrame([{
 def md_table(df):
     display(Markdown(df.to_markdown(index=False)))
 ```
+
+::: {.content-visible when-format="html"}
+```{python}
+#| echo: false
+# itables interactive mode — HTML only (its injected HTML must not leak into
+# the PDF/Word output as a stray "<IPython ... HTML object>").
+init_notebook_mode(all_interactive=True)
+```
+:::
 
 **Version 1.0 (draft)** — `{python} stats["total"]` assets in this build. **Interactive data access:** [CDH interactive dashboard](docs/index.html).
 
@@ -392,10 +403,16 @@ itab(df_strategic, widths=["9%", "5%", "28%", "15%", "10%", "33%"])
 ```
 :::
 ::: {.content-visible unless-format="html"}
+```{=latex}
+\begin{landscape}\footnotesize
+```
 ```{python}
 #| echo: false
 #| output: asis
 md_table(df_strategic)
+```
+```{=latex}
+\end{landscape}
 ```
 :::
 
@@ -484,10 +501,16 @@ itab(df_actnow, widths=["9%", "27%", "15%", "6%", "14%", "29%"])
 ```
 :::
 ::: {.content-visible unless-format="html"}
+```{=latex}
+\begin{landscape}\footnotesize
+```
 ```{python}
 #| echo: false
 #| output: asis
 md_table(df_actnow)
+```
+```{=latex}
+\end{landscape}
 ```
 :::
 
@@ -504,10 +527,16 @@ itab(df_annexa, widths=["9%", "25%", "13%", "12%", "11%", "6%", "9%", "15%"])
 ```
 :::
 ::: {.content-visible unless-format="html"}
+```{=latex}
+\begin{landscape}\scriptsize
+```
 ```{python}
 #| echo: false
 #| output: asis
 md_table(df_annexa)
+```
+```{=latex}
+\end{landscape}
 ```
 :::
 
