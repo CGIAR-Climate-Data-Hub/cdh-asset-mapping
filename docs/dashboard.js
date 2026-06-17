@@ -49,11 +49,16 @@ const state = {
   search: "",
   actNowOnly: false,
   queueTab: "strategic",
+  quadMode: "quadrant",      // Action priority plot: "quadrant" | "beeswarm"
+  flowMode: "sankey",        // Flows view: "sankey" | "network"
   tableSort: "priority_score",
   tableDir: "desc",
   selectedCell: null,        // "domain|||geo"
   charts: {},
+  netSim: null,              // active d3-force simulation (so we can stop it)
 };
+
+const VIEWS = ["overview", "explore", "flows", "action"];
 FILTER_DIMS.forEach((d) => (state.filters[d.field] = new Set()));
 
 const $ = (id) => document.getElementById(id);
@@ -63,7 +68,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const res = await fetch(DATA_URL);
   state.assets = (await res.json()).map(deriveAsset);
   const hash = (location.hash || "").replace("#", "");
-  if (["overview", "action", "explore"].includes(hash)) state.view = hash;
+  if (VIEWS.includes(hash)) state.view = hash;
   buildRail();
   wireChrome();
   switchView(state.view);
@@ -118,7 +123,7 @@ function buildRail() {
   wrap.innerHTML = FILTER_DIMS.map(({ field, label }) => {
     const counts = countBy(state.assets, field);
     const values = orderValues(field, Object.keys(counts));
-    const open = field === "domain_norm";
+    const open = true;        // groups unfurled by default (discoverability)
     const chips = values.map((v) =>
       `<button type="button" class="fchip" data-field="${field}" data-value="${esc(v)}" aria-pressed="false">
          ${esc(v)}<span class="fchip-count">${counts[v]}</span></button>`).join("");
@@ -184,6 +189,21 @@ function wireChrome() {
       renderQueue();
     });
   });
+  $("quadModeToggle").querySelectorAll(".seg").forEach((t) => {
+    t.addEventListener("click", () => {
+      state.quadMode = t.dataset.mode;
+      $("quadModeToggle").querySelectorAll(".seg").forEach((x) => x.classList.toggle("is-active", x === t));
+      renderQuadrant();
+    });
+  });
+  $("flowModeToggle").querySelectorAll(".seg").forEach((t) => {
+    t.addEventListener("click", () => {
+      state.flowMode = t.dataset.flow;
+      $("flowModeToggle").querySelectorAll(".seg").forEach((x) => x.classList.toggle("is-active", x === t));
+      renderFlows();
+    });
+  });
+  window.addEventListener("resize", debounce(() => { if (state.view === "flows") renderFlows(); }, 250));
   $("drawerClose").addEventListener("click", closeDrawer);
   $("drawerBackdrop").addEventListener("click", closeDrawer);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
@@ -203,6 +223,11 @@ function switchView(view) {
     on ? t.setAttribute("aria-current", "page") : t.removeAttribute("aria-current");
   });
   document.querySelectorAll(".view").forEach((v) => v.classList.toggle("is-active", v.dataset.view === view));
+  // Overview is the whole-portfolio snapshot — filters don't apply there, so
+  // hide the rail to remove the "controls that do nothing" confusion. Every
+  // other view is filter-driven, so the rail is shown.
+  document.querySelector(".layout").classList.toggle("rail-hidden", view === "overview");
+  if (view !== "flows" && state.netSim) { state.netSim.stop(); state.netSim = null; }
   renderView();
 }
 
@@ -212,6 +237,7 @@ function renderAll() { renderKpis(); renderActiveFilters(); renderView(); }
 function renderView() {
   if (state.view === "overview") renderOverview();
   else if (state.view === "action") renderAction();
+  else if (state.view === "flows") renderFlows();
   else renderExplore();
 }
 
@@ -435,19 +461,27 @@ const quickWinShade = {
 };
 
 function renderQuadrant() {
+  $("quadLegend").innerHTML = Object.entries(ACCESS_COL).map(([k, v]) =>
+    `<span><span class="dot" style="background:${v}"></span>${k}</span>`).join("");
+  if (state.quadMode === "beeswarm") return renderBeeswarm();
+
+  $("priPlotSub").textContent =
+    "Technical readiness × reuse potential. Bubble size = decision relevance · colour = access. Click a point for detail.";
   const pts = { Open: [], Restricted: [], Unknown: [] };
   state.filtered.forEach((a) => {
     const x = a.sc.technical_readiness, y = a.sc.reuse_potential;
     if (x == null || y == null) return;
     const r = 4 + (a.sc.decision_relevance ?? 0.5) * 11;
     (pts[a.access_norm] || pts.Unknown).push({
-      x: x + (Math.random() - 0.5) * 0.05,
-      y: y + (Math.random() - 0.5) * 0.05,
+      // deterministic spread (no Math.random so points don't jump on re-render)
+      x: x + jitter(a.label, 1) * 0.06,
+      y: y + jitter(a.label, 2) * 0.06,
       r, asset: a,
     });
   });
   const datasets = Object.entries(pts).filter(([, v]) => v.length).map(([acc, data]) => ({
-    label: acc, data, backgroundColor: hexA(ACCESS_COL[acc], 0.55), borderColor: "#fff", borderWidth: 1,
+    label: acc, data, backgroundColor: hexA(ACCESS_COL[acc], 0.5), borderColor: "#fff", borderWidth: 1,
+    hoverBackgroundColor: hexA(ACCESS_COL[acc], 0.95), hoverBorderColor: COL.green, hoverBorderWidth: 2,
   }));
   replaceChart("quadrant", {
     type: "bubble",
@@ -467,8 +501,49 @@ function renderQuadrant() {
       },
     },
   });
-  $("quadLegend").innerHTML = Object.entries(ACCESS_COL).map(([k, v]) =>
-    `<span><span class="dot" style="background:${v}"></span>${k}</span>`).join("");
+}
+
+/* Beeswarm: x = priority score, points dodged into lanes by access so dense
+   clusters never overlap — every asset is individually hoverable/clickable.
+   Solves the bubble-pileup problem in the quadrant view. */
+const SWARM_LANES = ["Open", "Restricted", "Unknown"];
+function renderBeeswarm() {
+  $("priPlotSub").textContent =
+    "Every asset as one dot · x = priority score (sort aid) · lane = access. Dots are spread so none overlap — click any for detail.";
+  const laneBase = { Open: 3, Restricted: 2, Unknown: 1 };
+  const datasets = SWARM_LANES.map((acc) => {
+    const items = state.filtered
+      .filter((a) => a.access_norm === acc && a.priority_score != null)
+      .sort((p, q) => p.priority_score - q.priority_score);
+    // bin by score, stack alternately above/below the lane centre
+    const binW = 3, counts = {}, data = [];
+    items.forEach((a) => {
+      const b = Math.round(a.priority_score / binW);
+      const k = (counts[b] = (counts[b] || 0) + 1) - 1;  // 0-based within bin
+      const off = Math.ceil(k / 2) * 0.16 * (k % 2 ? 1 : -1);  // 0, +.16, -.16, +.32…
+      data.push({ x: a.priority_score, y: laneBase[acc] + off, asset: a });
+    });
+    return { label: acc, data, backgroundColor: hexA(ACCESS_COL[acc], 0.7), borderColor: "#fff", borderWidth: 1,
+      hoverBackgroundColor: ACCESS_COL[acc], hoverBorderColor: COL.green, hoverBorderWidth: 2, pointRadius: 6, pointHoverRadius: 8 };
+  }).filter((d) => d.data.length);
+  replaceChart("quadrant", {
+    type: "scatter",
+    data: { datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      onClick: (_, els) => { if (els.length) { const d = state.charts.quadrant.data.datasets[els[0].datasetIndex].data[els[0].index]; openDrawer(d.asset); } },
+      scales: {
+        x: { min: 0, max: 100, title: { display: true, text: "Priority score (sort aid) →", color: "#6B7B88", font: { size: 11 } }, grid: { color: "#EEF2F7" }, ticks: { font: { size: 10 } } },
+        y: { min: 0.3, max: 3.7, grid: { display: false },
+          ticks: { stepSize: 1, font: { size: 11 }, color: COL.green,
+            callback: (v) => ({ 1: "Unknown", 2: "Restricted", 3: "Open" }[v] || "") } },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (c) => `${c.raw.asset.name} · score ${c.raw.asset.priority_score ?? "—"} · ${c.raw.asset.access_norm}` } },
+      },
+    },
+  });
 }
 
 function renderPathway() {
@@ -532,6 +607,207 @@ function renderQueue() {
   }).join("");
   host.querySelectorAll(".qcard").forEach((card) =>
     card.addEventListener("click", () => openDrawer(byLabel(card.dataset.label))));
+}
+
+/* ================= FLOWS =================
+   Two relational views the static report can't show, both driven by the
+   current filter:
+     · Sankey  — how each centre's assets flow Centre → Domain → Pathway.
+     · Network — assets linked when they share ≥2 climate input variables;
+                 multi-colour clusters = several centres building on the same
+                 inputs → a consolidation / shared-service opportunity. */
+function renderFlows() {
+  if (state.netSim) { state.netSim.stop(); state.netSim = null; }
+  const host = $("flowCanvas");
+  host.innerHTML = "";
+  const empty = !state.filtered.length;
+  $("flowEmpty").hidden = !empty;
+  host.hidden = empty;
+  if (empty) { $("flowLegend").innerHTML = ""; return; }
+  if (typeof d3 === "undefined") { host.innerHTML = `<div class="empty">Flow library failed to load (offline?).</div>`; return; }
+  if (state.flowMode === "network") renderNetwork(host);
+  else renderSankey(host);
+}
+
+function flowDims(host) {
+  const w = Math.max(320, host.clientWidth || 900);
+  return { w, h: state.flowMode === "network" ? 560 : 520 };
+}
+
+/* ---- Sankey: Centre → Domain → Pathway ---- */
+function renderSankey(host) {
+  $("flowTitle").textContent = "Portfolio flows — centre → domain → integration pathway";
+  $("flowSub").textContent = "How each centre's assets flow into themes and what happens to them next. Reflects the current filter. Hover a band for counts; click a node to filter.";
+  const { w, h } = flowDims(host);
+  const nodes = [], index = new Map();
+  const nodeKey = (kind, name) => `${kind}:${name}`;
+  function node(kind, name, field) {
+    const k = nodeKey(kind, name);
+    if (!index.has(k)) { index.set(k, nodes.length); nodes.push({ name, kind, field }); }
+    return index.get(k);
+  }
+  const linkMap = new Map();
+  const addLink = (s, t, key) => {
+    let l = linkMap.get(key);
+    if (!l) { l = { source: s, target: t, value: 0 }; linkMap.set(key, l); }
+    l.value++;
+  };
+  state.filtered.forEach((a) => {
+    const c = node("centre", a.centre, "centre");
+    const d = node("domain", a.domain_norm, "domain_norm");
+    const p = node("pathway", a.integration_hint, "integration_hint");
+    addLink(c, d, `c${c}-d${d}`);
+    addLink(d, p, `d${d}-p${p}`);
+  });
+  const links = [...linkMap.values()];
+
+  const sankey = d3.sankey()
+    .nodeWidth(15).nodePadding(11)
+    .extent([[6, 8], [w - 6, h - 8]]);
+  const graph = sankey({ nodes: nodes.map((n) => ({ ...n })), links: links.map((l) => ({ ...l })) });
+
+  const svg = d3.select(host).append("svg").attr("width", w).attr("height", h).attr("class", "flow-svg");
+  const nodeColor = (n) => n.kind === "centre" ? centreColor(n.name)
+    : n.kind === "pathway" ? (PATHWAY.find((p) => p.key === n.name)?.col || COL.unknown)
+    : COL.blue;
+
+  svg.append("g").attr("fill", "none").selectAll("path")
+    .data(graph.links).join("path")
+    .attr("d", d3.sankeyLinkHorizontal())
+    .attr("stroke", (d) => nodeColor(d.source))
+    .attr("stroke-opacity", 0.32)
+    .attr("stroke-width", (d) => Math.max(1, d.width))
+    .on("mousemove", (e, d) => showTip(`<b>${esc(d.source.name)}</b> → <b>${esc(d.target.name)}</b><br>${d.value} asset${d.value > 1 ? "s" : ""}`, e))
+    .on("mouseleave", hideTip)
+    .style("mix-blend-mode", "multiply");
+
+  const gnode = svg.append("g").selectAll("g").data(graph.nodes).join("g");
+  gnode.append("rect")
+    .attr("x", (d) => d.x0).attr("y", (d) => d.y0)
+    .attr("width", (d) => d.x1 - d.x0).attr("height", (d) => Math.max(1, d.y1 - d.y0))
+    .attr("fill", nodeColor).attr("rx", 2)
+    .style("cursor", "pointer")
+    .on("mousemove", (e, d) => showTip(`<b>${esc(d.name)}</b><br>${d.value} asset${d.value > 1 ? "s" : ""}`, e))
+    .on("mouseleave", hideTip)
+    .on("click", (e, d) => { hideTip(); if (d.field) drillTo([[d.field, d.name]]); });
+
+  gnode.append("text")
+    .attr("x", (d) => d.x0 < w / 2 ? d.x1 + 6 : d.x0 - 6)
+    .attr("y", (d) => (d.y0 + d.y1) / 2)
+    .attr("dy", "0.35em")
+    .attr("text-anchor", (d) => d.x0 < w / 2 ? "start" : "end")
+    .attr("class", "flow-nodelabel")
+    .text((d) => (d.y1 - d.y0) > 9 ? d.name : "");
+
+  $("flowLegend").innerHTML =
+    `<span><span class="dot" style="background:${COL.blue}"></span>centre / domain</span>` +
+    PATHWAY.map((p) => `<span><span class="dot" style="background:${p.col}"></span>${esc(p.key)}</span>`).join("");
+}
+
+/* ---- Network: centre ↔ domain bipartite ----
+   Centres and domains as nodes; an edge means a centre has assets in that
+   domain (width = how many). A domain pulled by several centres is a hub
+   coordination target; a domain hanging off one centre is concentration
+   risk. A relational angle the report's static matrix can't give. */
+function renderNetwork(host) {
+  $("flowTitle").textContent = "Collaboration network — which centres cover which domains";
+  $("flowSub").textContent = "Centres (coloured) and domains (dark) linked when a centre holds assets in that domain; line thickness = how many. Domains pulled by several centres are coordination targets; domains hanging off one centre are concentration risk. Click any node to filter.";
+  const { w, h } = flowDims(host);
+
+  const edgeMap = new Map();   // "centre|||domain" -> count
+  const cTot = {}, dTot = {}, dCentres = {};
+  state.filtered.forEach((a) => {
+    const c = a.centre, dm = a.domain_norm;
+    const k = `${c}|||${dm}`;
+    edgeMap.set(k, (edgeMap.get(k) || 0) + 1);
+    cTot[c] = (cTot[c] || 0) + 1;
+    dTot[dm] = (dTot[dm] || 0) + 1;
+    (dCentres[dm] ||= new Set()).add(c);
+  });
+  const nodes = [], nIdx = new Map();
+  const addNode = (kind, name, field) => {
+    const id = `${kind}:${name}`;
+    if (!nIdx.has(id)) {
+      const tot = (kind === "centre" ? cTot[name] : dTot[name]) || 0;
+      nIdx.set(id, nodes.length);
+      nodes.push({ id, kind, name, field, tot, r: 7 + Math.sqrt(tot) * 3.2 });
+    }
+    return nIdx.get(id);
+  };
+  const links = [...edgeMap.entries()].map(([k, v]) => {
+    const [c, dm] = k.split("|||");
+    return { source: addNode("centre", c, "centre"), target: addNode("domain", dm, "domain_norm"), v };
+  });
+
+  const svg = d3.select(host).append("svg").attr("width", w).attr("height", h).attr("class", "flow-svg");
+  const link = svg.append("g").attr("stroke", "#B8C4D0").selectAll("line")
+    .data(links).join("line")
+    .attr("stroke-width", (d) => Math.max(1, Math.min(6, d.v)))
+    .attr("stroke-opacity", 0.45)
+    .on("mousemove", (e, d) => showTip(`<b>${esc(d.source.name)}</b> → <b>${esc(d.target.name)}</b><br>${d.v} asset${d.v > 1 ? "s" : ""}`, e))
+    .on("mouseleave", hideTip);
+
+  const g = svg.append("g").selectAll("g").data(nodes).join("g").style("cursor", "pointer")
+    .on("mousemove", (e, d) => showTip(
+      d.kind === "centre"
+        ? `<b>${esc(d.name)}</b><br>${d.tot} asset${d.tot > 1 ? "s" : ""}`
+        : `<b>${esc(d.name)}</b><br>${d.tot} asset${d.tot > 1 ? "s" : ""} · ${dCentres[d.name]?.size || 0} centre${(dCentres[d.name]?.size || 0) > 1 ? "s" : ""}`, e))
+    .on("mouseleave", hideTip)
+    .on("click", (e, d) => { hideTip(); drillTo([[d.field, d.name]]); });
+  g.append("circle")
+    .attr("r", (d) => d.r)
+    .attr("fill", (d) => d.kind === "centre" ? centreColor(d.name) : COL.green)
+    .attr("stroke", "#fff").attr("stroke-width", 1.5);
+  g.append("text")
+    .attr("class", "flow-nodelabel")
+    .attr("text-anchor", "middle")
+    .attr("dy", (d) => d.r + 12)
+    .text((d) => d.kind === "domain" || d.tot >= 8 ? d.name : "");
+
+  const sim = d3.forceSimulation(nodes)
+    .force("link", d3.forceLink(links).id((d, i) => i).distance(70).strength(0.5))
+    .force("charge", d3.forceManyBody().strength(-260))
+    .force("center", d3.forceCenter(w / 2, h / 2))
+    .force("collide", d3.forceCollide().radius((d) => d.r + 14))
+    .on("tick", () => {
+      link.attr("x1", (d) => d.source.x).attr("y1", (d) => d.source.y)
+          .attr("x2", (d) => d.target.x).attr("y2", (d) => d.target.y);
+      g.attr("transform", (d) => `translate(${d.x = Math.max(d.r, Math.min(w - d.r, d.x))},${d.y = Math.max(d.r + 4, Math.min(h - d.r - 12, d.y))})`);
+    });
+  state.netSim = sim;
+  g.call(d3.drag()
+    .on("start", (e, d) => { if (!e.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+    .on("drag", (e, d) => { d.fx = e.x; d.fy = e.y; })
+    .on("end", (e, d) => { if (!e.active) sim.alphaTarget(0); d.fx = null; d.fy = null; }));
+
+  const multi = Object.values(dCentres).filter((s) => s.size >= 3).length;
+  const solo = Object.values(dCentres).filter((s) => s.size === 1).length;
+  $("flowLegend").innerHTML =
+    `<span><span class="dot" style="background:${COL.blue}"></span>centre</span>` +
+    `<span><span class="dot" style="background:${COL.green}"></span>domain</span>` +
+    `<span class="flow-stat">${multi} domain${multi === 1 ? "" : "s"} span ≥3 centres</span>` +
+    `<span class="flow-stat">${solo} on a single centre</span>` +
+    `<span class="flow-hint">node size = assets · drag to explore</span>`;
+}
+
+/* SVG tooltip (shared by sankey + network) */
+function showTip(html, e) {
+  const tip = $("flowTip");
+  tip.innerHTML = html; tip.hidden = false;
+  tip.style.left = `${e.clientX + 14}px`;
+  tip.style.top = `${e.clientY + 14}px`;
+}
+function hideTip() { $("flowTip").hidden = true; }
+
+/* Stable per-centre colour map (sorted for determinism). */
+let CENTRE_COLORS = null;
+function centreColor(c) {
+  if (!CENTRE_COLORS) {
+    CENTRE_COLORS = {};
+    [...new Set(state.assets.map((a) => a.centre))].sort()
+      .forEach((name, i) => { CENTRE_COLORS[name] = SEG_COLORS[i % SEG_COLORS.length]; });
+  }
+  return CENTRE_COLORS[c] || COL.unknown;
 }
 
 /* ================= EXPLORE ================= */
@@ -681,4 +957,13 @@ function hexA(hex, a) {
 }
 function esc(v) {
   return String(v ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+}
+// Deterministic [-0.5,0.5] jitter from a string key + salt (stable across renders).
+function jitter(key, salt) {
+  let h = salt * 2654435761;
+  for (let i = 0; i < key.length; i++) h = (h ^ key.charCodeAt(i)) * 16777619 >>> 0;
+  return (h % 1000) / 1000 - 0.5;
+}
+function debounce(fn, ms) {
+  let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
 }

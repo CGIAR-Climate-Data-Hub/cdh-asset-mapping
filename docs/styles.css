@@ -320,6 +320,32 @@ tbody tr:hover { background: var(--blue-soft); }
 
 .empty { padding: 2rem; text-align: center; color: var(--muted); font-size: .88rem; }
 
+/* ---------- Rail-hidden (Overview = whole-portfolio snapshot) ---------- */
+.layout.rail-hidden { grid-template-columns: 1fr; }
+.layout.rail-hidden .rail { display: none; }
+
+/* ---------- Segmented toggle (priority plot / flow mode) ---------- */
+.head-tools { display: flex; align-items: center; gap: .9rem; flex-wrap: wrap; }
+.seg-toggle { display: inline-flex; gap: .25rem; background: var(--bg); padding: .25rem; border-radius: 10px; }
+.seg { border: 0; background: none; padding: .35rem .8rem; border-radius: 7px; font-weight: 600; font-size: .82rem; color: var(--muted); cursor: pointer; }
+.seg.is-active { background: #fff; color: var(--ink); box-shadow: var(--shadow); }
+
+/* ---------- Flows view ---------- */
+.flow-legend { padding: .2rem .1rem .7rem; }
+.flow-canvas { width: 100%; min-height: 520px; }
+.flow-svg { width: 100%; height: auto; display: block; }
+.flow-nodelabel { font: 600 11px "IBM Plex Sans", sans-serif; fill: var(--ink); pointer-events: none; }
+.flow-svg path { transition: stroke-opacity .12s; }
+.flow-svg path:hover { stroke-opacity: .6 !important; }
+.flow-svg circle:hover { stroke: var(--green); stroke-width: 2.5; }
+.flow-stat { font-weight: 700; color: var(--ink); font-size: .8rem; }
+.flow-hint { font-size: .76rem; color: var(--muted); }
+.flow-tip {
+  position: fixed; z-index: 50; pointer-events: none;
+  background: var(--ink); color: #fff; font-size: .78rem; line-height: 1.35;
+  padding: .45rem .6rem; border-radius: 8px; max-width: 280px; box-shadow: var(--shadow);
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 1100px) {
   .view-grid { grid-template-columns: repeat(2, 1fr); }

@@ -9,6 +9,8 @@
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12/dist/d3-sankey.min.js" defer></script>
     <script src="dashboard.js" defer></script>
   </head>
   <body>
@@ -27,13 +29,17 @@
           <span class="viewtab-title">Overview</span>
           <span class="viewtab-sub">Where are we strong &amp; weak?</span>
         </button>
+        <button type="button" class="viewtab" data-view="explore">
+          <span class="viewtab-title">Explore</span>
+          <span class="viewtab-sub">Find &amp; inspect any asset</span>
+        </button>
+        <button type="button" class="viewtab" data-view="flows">
+          <span class="viewtab-title">Flows</span>
+          <span class="viewtab-sub">How assets connect</span>
+        </button>
         <button type="button" class="viewtab" data-view="action">
           <span class="viewtab-title">Action</span>
           <span class="viewtab-sub">What to do now &amp; next</span>
-        </button>
-        <button type="button" class="viewtab" data-view="explore">
-          <span class="viewtab-title">Explore</span>
-          <span class="viewtab-sub">Every asset, in detail</span>
         </button>
       </nav>
 
@@ -121,8 +127,14 @@
           <div class="view-grid action-grid">
             <article class="panel span-2 panel-hero">
               <div class="panel-head">
-                <div><h3>Priority quadrant</h3><p class="panel-sub">Technical readiness × reuse potential. Bubble size = decision relevance · colour = access. Click a bubble for detail.</p></div>
-                <div class="legend" id="quadLegend"></div>
+                <div><h3>Priority plot</h3><p class="panel-sub" id="priPlotSub">Technical readiness × reuse potential. Bubble size = decision relevance · colour = access. Click a point for detail.</p></div>
+                <div class="head-tools">
+                  <div class="seg-toggle" id="quadModeToggle" role="tablist">
+                    <button type="button" class="seg is-active" data-mode="quadrant" role="tab">Quadrant</button>
+                    <button type="button" class="seg" data-mode="beeswarm" role="tab">Beeswarm</button>
+                  </div>
+                  <div class="legend" id="quadLegend"></div>
+                </div>
               </div>
               <div class="chart-wrap tall"><canvas id="quadrant"></canvas></div>
             </article>
@@ -184,8 +196,32 @@
             </article>
           </div>
         </section>
+
+        <!-- FLOWS -->
+        <section class="view" id="view-flows" data-view="flows">
+          <div class="view-grid">
+            <article class="panel span-3 panel-hero">
+              <div class="panel-head">
+                <div>
+                  <h3 id="flowTitle">Portfolio flows — centre → domain → integration pathway</h3>
+                  <p class="panel-sub" id="flowSub">How each centre's assets flow into themes and what happens to them next. Reflects the current filter. Hover a band for counts.</p>
+                </div>
+                <div class="seg-toggle" id="flowModeToggle" role="tablist">
+                  <button type="button" class="seg is-active" data-flow="sankey" role="tab">Sankey</button>
+                  <button type="button" class="seg" data-flow="network" role="tab">Network</button>
+                </div>
+              </div>
+              <div id="flowLegend" class="legend flow-legend"></div>
+              <div id="flowCanvas" class="flow-canvas"></div>
+              <div id="flowEmpty" class="empty" hidden>No assets in view.</div>
+            </article>
+          </div>
+        </section>
       </main>
     </div>
+
+    <!-- Floating tooltip for SVG flow views -->
+    <div id="flowTip" class="flow-tip" hidden></div>
 
     <!-- ===== Detail drawer ===== -->
     <div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
