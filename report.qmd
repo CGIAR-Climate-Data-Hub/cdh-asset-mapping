@@ -171,6 +171,33 @@ df_annexa = pd.DataFrame([{
 
 def md_table(df):
     display(Markdown(df.to_markdown(index=False)))
+
+import textwrap
+
+def grid_table(df, charw):
+    # Emit a pandoc GRID table with fixed per-column character widths. Unlike
+    # pipe tables, grid tables carry column widths in the AST, so the Word AND
+    # PDF writers honour them (short columns stay narrow, text columns wrap
+    # within their width) — no autofit mangling.
+    cols = list(df.columns)
+    def lines_for(text, w):
+        text = str("" if text is None else text).replace("\n", " ").strip()
+        return textwrap.wrap(text, w) or [""]
+    def rule(ch):
+        return "+" + "+".join(ch * (w + 2) for w in charw) + "+"
+    def row(cells):
+        wrapped = [lines_for(cells[i], charw[i]) for i in range(len(cols))]
+        h = max(len(x) for x in wrapped)
+        out = []
+        for li in range(h):
+            out.append("| " + " | ".join(
+                (wrapped[i][li] if li < len(wrapped[i]) else "").ljust(charw[i])
+                for i in range(len(cols))) + " |")
+        return out
+    lines = [rule("-")] + row(list(cols)) + [rule("=")]
+    for _, r in df.iterrows():
+        lines += row([r[c] for c in cols]) + [rule("-")]
+    display(Markdown("\n".join(lines)))
 ```
 
 ::: {.content-visible when-format="html"}
@@ -409,7 +436,7 @@ itab(df_strategic, widths=["9%", "5%", "28%", "15%", "10%", "33%"])
 ```{python}
 #| echo: false
 #| output: asis
-md_table(df_strategic)
+grid_table(df_strategic, [11, 4, 30, 15, 10, 46])
 ```
 ```{=latex}
 \end{landscape}
@@ -507,7 +534,7 @@ itab(df_actnow, widths=["9%", "27%", "15%", "6%", "14%", "29%"])
 ```{python}
 #| echo: false
 #| output: asis
-md_table(df_actnow)
+grid_table(df_actnow, [11, 30, 15, 6, 14, 40])
 ```
 ```{=latex}
 \end{landscape}
@@ -533,7 +560,7 @@ itab(df_annexa, widths=["9%", "25%", "13%", "12%", "11%", "6%", "9%", "15%"])
 ```{python}
 #| echo: false
 #| output: asis
-md_table(df_annexa)
+grid_table(df_annexa, [10, 30, 14, 13, 12, 5, 10, 14])
 ```
 ```{=latex}
 \end{landscape}
