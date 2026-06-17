@@ -728,7 +728,7 @@ function renderSankey(host) {
    risk. A relational angle the report's static matrix can't give. */
 function renderNetwork(host) {
   $("flowTitle").textContent = "Collaboration network — which centres cover which domains";
-  $("flowSub").textContent = "Centres (coloured) and domains (dark) linked when a centre holds assets in that domain; line thickness = how many. Domains pulled by several centres are coordination targets; domains hanging off one centre are concentration risk. Click any node to filter.";
+  $("flowSub").textContent = "Centres (coloured) and domains (dark) linked when a centre holds assets in that domain; line thickness = how many. Domains pulled by several centres are coordination targets; domains hanging off one centre are concentration risk. Hover or click a node to trace it; double-click to filter Explore.";
   const { w, h } = flowDims(host);
 
   const edgeMap = new Map();   // "centre|||domain" -> count
@@ -764,13 +764,22 @@ function renderNetwork(host) {
     .on("mousemove", (e, d) => showTip(`<b>${esc(d.source.name)}</b> → <b>${esc(d.target.name)}</b><br>${d.v} asset${d.v > 1 ? "s" : ""}`, e))
     .on("mouseleave", hideTip);
 
+  // Adjacency for neighbourhood tracing.
+  const neighbours = new Map(nodes.map((n) => [n, new Set([n])]));
+  links.forEach((l) => { neighbours.get(l.source).add(l.target); neighbours.get(l.target).add(l.source); });
+  let focus = null;   // pinned node (click) — survives mouse-out
+
   const g = svg.append("g").selectAll("g").data(nodes).join("g").style("cursor", "pointer")
+    .on("mouseenter", (e, d) => { if (!focus) paint(d); })
     .on("mousemove", (e, d) => showTip(
       d.kind === "centre"
         ? `<b>${esc(d.name)}</b><br>${d.tot} asset${d.tot > 1 ? "s" : ""}`
         : `<b>${esc(d.name)}</b><br>${d.tot} asset${d.tot > 1 ? "s" : ""} · ${dCentres[d.name]?.size || 0} centre${(dCentres[d.name]?.size || 0) > 1 ? "s" : ""}`, e))
-    .on("mouseleave", hideTip)
-    .on("click", (e, d) => { hideTip(); drillTo([[d.field, d.name]]); });
+    .on("mouseleave", () => { hideTip(); if (!focus) paint(null); })
+    // Single click pins/unpins focus IN PLACE (no tab jump); double-click filters.
+    .on("click", (e, d) => { e.stopPropagation(); focus = focus === d ? null : d; paint(focus); })
+    .on("dblclick", (e, d) => { e.stopPropagation(); hideTip(); drillTo([[d.field, d.name]]); });
+  svg.on("click", () => { focus = null; paint(null); });
   g.append("circle")
     .attr("r", (d) => d.r)
     .attr("fill", (d) => d.kind === "centre" ? centreColor(d.name) : COL.green)
@@ -780,6 +789,14 @@ function renderNetwork(host) {
     .attr("text-anchor", "middle")
     .attr("dy", (d) => d.r + 12)
     .text((d) => d.kind === "domain" || d.tot >= 8 ? d.name : "");
+
+  // Brighten a node + its neighbours and incident links; fade the rest.
+  function paint(n) {
+    const near = n ? neighbours.get(n) : null;
+    g.attr("opacity", (d) => !near || near.has(d) ? 1 : 0.12);
+    link.attr("stroke-opacity", (l) => !near ? 0.45 : (l.source === n || l.target === n) ? 0.85 : 0.04)
+        .attr("stroke", (l) => near && (l.source === n || l.target === n) ? COL.green : "#B8C4D0");
+  }
 
   const sim = d3.forceSimulation(nodes)
     .force("link", d3.forceLink(links).id((d, i) => i).distance(70).strength(0.5))
@@ -804,7 +821,7 @@ function renderNetwork(host) {
     `<span><span class="dot" style="background:${COL.green}"></span>domain</span>` +
     `<span class="flow-stat">${multi} domain${multi === 1 ? "" : "s"} span ≥3 centres</span>` +
     `<span class="flow-stat">${solo} on a single centre</span>` +
-    `<span class="flow-hint">node size = assets · drag to explore</span>`;
+    `<span class="flow-hint">node size = assets · click to trace · double-click to filter · drag to reposition</span>`;
 }
 
 /* SVG tooltip (shared by sankey + network) */
