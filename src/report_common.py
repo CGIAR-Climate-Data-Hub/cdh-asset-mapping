@@ -764,14 +764,14 @@ def build_report_body(assets, s, figures_prefix="figures"):
         f"(see Section 6.1). 'Domains' counts the distinct climate domains a centre covers."
     )
     W(f"")
+    W(f"*Table — Per-centre strength profile (mean priority is the optional composite of Section 6.1).*")
+    W(f"")
     W(f"| Centre | Assets | Mean priority | Domains covered | Hub-funded |")
     W(f"|---|---|---|---|---|")
     for c, st in sorted(s["centre_strength"].items(),
                         key=lambda x: -x[1]["mean_score"]):
         tag = "Yes" if c in HUB_FUNDED else "No"
         W(f"| {centre_label(c)} | {st['n']} | {st['mean_score']} | {len(st['domains'])} | {tag} |")
-    W(f"")
-    W(f"*Table — Per-centre strength profile (mean priority is the optional composite of Section 6.1).*")
     W(f"")
 
     W(f"### 5.4 Notable assets outside this mapping")
@@ -853,6 +853,8 @@ def build_report_body(assets, s, figures_prefix="figures"):
         W(f"")
         W(f"*Data-quality note: {'; '.join(notes)}. To be corrected with centres next cycle.*")
     W(f"")
+    W(f"*Table 1 — Strategic nominations: each centre's top-ranked assets. Asset names link to the data source where a URL was provided.*")
+    W(f"")
     W(f"| Centre | Rank | Asset | Domain | Access | Centre justification |")
     W(f"|---|---|---|---|---|---|")
     for a in s["strategic"]:
@@ -861,27 +863,20 @@ def build_report_body(assets, s, figures_prefix="figures"):
             f"{a['domain_norm']} | {a.get('access_norm', '—')} | {short_why(a)} |"
         )
     W(f"")
-    W(f"*Table 1 — Strategic nominations: each centre's top-ranked assets. Asset names link to the data source where a URL was provided.*")
-    W(f"")
 
     W(f"### 6.3 Priority quadrant")
     W(f"")
-    W(
-        f"![**Figure 7. Priority quadrant.** Each point is an asset placed by its submitter-rated "
-        f"technical readiness (x-axis) and reuse potential (y-axis); colour shows access status "
-        f"(green = Open, orange = Restricted, grey = Unknown). Markers are a uniform size — almost "
-        f"every asset is rated 'High' decision relevance, so sizing by it added clutter rather than "
-        f"information. The shaded top-right zone holds the natural 'quick wins' — assets that are "
-        f"both ready and broadly reusable. Reuse potential and access are independent criteria: an "
-        f"asset can be highly reusable in content yet currently access-restricted, so high-reuse "
-        f"Restricted (orange, upper) points are not a contradiction — they are the prime candidates "
-        f"for an access negotiation to unlock that value.]({fig('fig7_priority_quadrant.png', 'Figure 7')})"
-    )
+    W(f"<!--QUADRANT-->")
     W(f"")
     W(
-        f"*The interactive dashboard (linked at the top of this report) renders this quadrant — and "
-        f"the coverage matrix in Figure 6 — with hover tooltips and click-through to each asset's "
-        f"full record.*"
+        f"**Figure 7. Priority quadrant.** Each point is an asset placed by its submitter-rated "
+        f"technical readiness (x-axis) and reuse potential (y-axis); colour shows access status "
+        f"(green = Open, orange = Restricted, grey = Unknown). **Hover any point** for the asset's "
+        f"name, centre, domain, access, and priority score. The shaded top-right zone holds the "
+        f"natural 'quick wins' — assets that are both ready and broadly reusable. Reuse potential "
+        f"and access are independent criteria, so high-reuse Restricted (orange, upper) points are "
+        f"not a contradiction — they are the prime candidates for an access negotiation to unlock "
+        f"that value."
     )
     W(f"")
     W(
@@ -935,6 +930,8 @@ def build_report_body(assets, s, figures_prefix="figures"):
         f"ingestion (top {min(len(inow), 15)} shown):"
     )
     W(f"")
+    W(f"*Table 2 — 'Act now' shortlist: Open-access, high-readiness assets. Asset names link to the data source.*")
+    W(f"")
     W(f"| Centre | Asset | Domain | Pathway | Rationale |")
     W(f"|---|---|---|---|---|")
     for a in inow[:15]:
@@ -943,8 +940,6 @@ def build_report_body(assets, s, figures_prefix="figures"):
             f"| {centre_label(a['centre'])} | {name} | "
             f"{a['domain_norm']} | {a.get('integration_hint', '')} | {why} |"
         )
-    W(f"")
-    W(f"*Table 2 — 'Act now' shortlist: Open-access, high-readiness assets. Asset names link to the data source.*")
     W(f"")
 
     W(f"### 6.6 Next cycle — high value, currently blocked")
@@ -956,6 +951,8 @@ def build_report_body(assets, s, figures_prefix="figures"):
         f"investment before the next mapping cycle (top {min(len(nxt), 12)} shown):"
     )
     W(f"")
+    W(f"*Table 3 — 'Next cycle' queue: high-value assets blocked by access or readiness. Asset names link to the data source.*")
+    W(f"")
     W(f"| Centre | Asset | Domain | Blocker | Rationale |")
     W(f"|---|---|---|---|---|")
     for a in nxt[:12]:
@@ -966,8 +963,6 @@ def build_report_body(assets, s, figures_prefix="figures"):
             f"| {centre_label(a['centre'])} | {name} | "
             f"{a['domain_norm']} | {blocker} | {why} |"
         )
-    W(f"")
-    W(f"*Table 3 — 'Next cycle' queue: high-value assets blocked by access or readiness. Asset names link to the data source.*")
     W(f"")
 
     W(f"### 6.7 Shared dependencies and reuse signals")

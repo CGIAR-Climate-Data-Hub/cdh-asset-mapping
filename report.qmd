@@ -72,55 +72,85 @@ execute:
 #| echo: true
 #| code-fold: true
 #| code-summary: "Show code"
+# This document is a reproducible notebook: load the normalised data and compute
+# all statistics once, then generate every section, figure, and table from them.
 import pathlib
 import sys
 from IPython.display import Markdown, display
 
-ROOT = pathlib.Path.cwd()
-sys.path.insert(0, str(ROOT / "src"))
-
-# Set live dashboard link here when official endpoint is available.
-DASHBOARD_URL = "docs/index.html"
-DASHBOARD_LABEL = "CDH interactive dashboard"
-
+sys.path.insert(0, str(pathlib.Path.cwd() / "src"))
 from report_common import build_report_body, compute_stats, load
-```
 
-```{python}
-#| echo: true
-#| code-fold: true
-#| code-summary: "Show code"
 assets, merge_log = load()
 stats = compute_stats(assets, merge_log)
 ```
 
-**Version:** 1.0-draft  
-**Report month:** `{{< meta date >}}`  
-**Status:** Internal review draft  
-**Assets in current build:** `{python} stats["total"]`
+**Version 1.0 (draft)** — `{python} stats["total"]` assets in this build. **Interactive data access:** [CDH interactive dashboard](docs/index.html).
+
+> **Reproducibility.** Every figure, table, and statistic in this report is generated directly
+> from the data — none are hand-typed. The code behind any step can be read by expanding its
+> **▸ Show code** block, and the complete pipeline (Excel → `assets.json` → figures → this
+> report) lives in the
+> [project repository](https://github.com/CGIAR-Climate-Data-Hub/cdh-asset-mapping).
 
 ```{python}
-#| output: asis
-if DASHBOARD_URL:
-    display(Markdown(
-        f"**Interactive data access:** [{DASHBOARD_LABEL}]({DASHBOARD_URL})"
-    ))
-else:
-    display(Markdown(
-        "**Interactive data access:** static dashboard available at `docs/index.html`."
-    ))
-```
-
-```{python}
-#| label: report-body
+#| label: report-body-pre
 #| echo: true
 #| code-fold: true
 #| code-summary: "Show the code that generates this report"
 #| output: asis
-# Every section, statistic, and table below is generated from
-# data/normalized/assets.json by build_report_body() in src/report_common.py.
-# No numbers are hand-typed. The full pipeline (Excel -> assets.json -> figures
-# -> this report) is documented in Section 2.4 and version-controlled at
-# https://github.com/CGIAR-Climate-Data-Hub/cdh-asset-mapping
-display(Markdown(build_report_body(assets, stats, figures_prefix="outputs/figures")))
+# The narrative, every statistic, and every table are generated from
+# data/normalized/assets.json by build_report_body() in src/report_common.py —
+# no numbers are hand-typed. The body is split at the priority-quadrant marker
+# so the interactive plot (next cell) can be injected at Section 6.3.
+body = build_report_body(assets, stats, figures_prefix="outputs/figures")
+pre, _, post = body.partition("<!--QUADRANT-->")
+display(Markdown(pre))
+```
+
+```{python}
+#| label: fig-quadrant
+#| echo: true
+#| code-fold: true
+#| code-summary: "Show the interactive figure code"
+import random
+import plotly.graph_objects as go
+
+ACCESS_COLOUR = {"Open": "#1F8A70", "Restricted": "#C2691C", "Unknown": "#7C8A99"}
+_jit = random.Random(42)
+qfig = go.Figure()
+for _acc, _col in ACCESS_COLOUR.items():
+    _pts = [a for a in assets
+            if a.get("access_norm") == _acc
+            and a.get("score_components", {}).get("technical_readiness") is not None
+            and a.get("score_components", {}).get("reuse_potential") is not None]
+    qfig.add_trace(go.Scatter(
+        x=[a["score_components"]["technical_readiness"] + _jit.gauss(0, 0.018) for a in _pts],
+        y=[a["score_components"]["reuse_potential"] + _jit.gauss(0, 0.018) for a in _pts],
+        mode="markers", name=_acc,
+        marker=dict(size=11, color=_col, opacity=0.72, line=dict(width=1, color="white")),
+        customdata=[[a["name"], a["centre"], a["domain_norm"], _acc,
+                     a.get("priority_score", "—")] for a in _pts],
+        hovertemplate=("<b>%{customdata[0]}</b><br>%{customdata[1]} · %{customdata[2]}"
+                       "<br>Access: %{customdata[3]} · Priority: %{customdata[4]}<extra></extra>"),
+    ))
+qfig.add_shape(type="rect", x0=0.7, y0=0.7, x1=1.06, y1=1.06,
+               fillcolor="rgba(31,138,112,0.08)", line_width=0, layer="below")
+qfig.add_annotation(x=1.05, y=1.05, text="Quick wins", showarrow=False,
+                    xanchor="right", font=dict(color="#1F8A70", size=11))
+qfig.update_layout(
+    height=470, template="simple_white",
+    xaxis=dict(title="Technical readiness →", range=[0.15, 1.08]),
+    yaxis=dict(title="Reuse potential →", range=[0.15, 1.08]),
+    legend_title_text="Access", margin=dict(l=60, r=20, t=20, b=50))
+qfig
+```
+
+```{python}
+#| label: report-body-post
+#| echo: true
+#| code-fold: true
+#| code-summary: "Show code"
+#| output: asis
+display(Markdown(post))
 ```
