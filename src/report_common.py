@@ -547,11 +547,14 @@ def build_report_body(assets, s, figures_prefix="figures"):
 
     W(f"### 4.2 Domain distribution")
     W(f"")
+    W(f"<!--FIG2-->")
+    W(f"")
     W(
-        f"![**Figure 2. Distribution by climate domain.** Number of assets in each normalised "
+        f"**Figure 2. Distribution by climate domain.** Number of assets in each normalised "
         f"climate domain (definitions in Section 3); assets with no specified domain are excluded. "
-        f"Adaptation Analytics and Hazard are the largest domains, while Adaptive Capacity and "
-        f"Climate Policy / Finance are the thinnest.]({fig('fig2_climate_domains.png', 'Figure 2')})"
+        f"Hover a bar for its share of the portfolio, the centres contributing it, and how much is "
+        f"openly accessible. Adaptation Analytics and Hazard are the largest domains; Adaptive "
+        f"Capacity and Climate Policy / Finance the thinnest."
     )
     W(f"")
 
@@ -574,11 +577,13 @@ def build_report_body(assets, s, figures_prefix="figures"):
 
     W(f"#### Cross-centre domain coverage")
     W(f"")
+    W(f"<!--FIG5-->")
+    W(f"")
     W(
-        f"![**Figure 5. Centre × domain heatmap.** Number of assets each centre holds in each "
-        f"single-label climate domain. Darker cells hold more assets; blank cells mean none. "
-        f"Hybrid-domain assets (e.g. Sensitivity / Adaptation Analytics) are excluded here for "
-        f"readability but are counted in Figure 2.]({fig('fig5_heatmap_centre_domain.png', 'Figure 5')})"
+        f"**Figure 5. Centre × domain heatmap.** Number of assets each centre holds in each "
+        f"single-label climate domain; darker cells hold more, blank cells none. Hover a cell for "
+        f"example assets and the open-access share of that centre–domain combination. "
+        f"Hybrid-domain assets are excluded here for readability but counted in Figure 2."
     )
     W(f"")
     W(
@@ -590,11 +595,12 @@ def build_report_body(assets, s, figures_prefix="figures"):
 
     W(f"### 4.3 Ownership and asset type")
     W(f"")
+    W(f"<!--FIG3-->")
+    W(f"")
     W(
-        f"![**Figure 3. Asset type (ownership).** Share of catalogued assets by ownership class: "
+        f"**Figure 3. Asset type (ownership).** Share of catalogued assets by ownership class — "
         f"CGIAR-produced, co-produced with partners, or external datasets adopted into CGIAR "
-        f"workflows. Bars show counts with the percentage of the portfolio in "
-        f"parentheses.]({fig('fig3_asset_types.png', 'Figure 3')})"
+        f"workflows. Hover a bar for the centres behind it and its open-access share."
     )
     W(f"")
     cgiar_n = s["type_counts"].get("CGIAR-produced", 0)
@@ -611,11 +617,13 @@ def build_report_body(assets, s, figures_prefix="figures"):
 
     W(f"### 4.4 Geographic coverage")
     W(f"")
+    W(f"<!--FIG4-->")
+    W(f"")
     W(
-        f"![**Figure 4. Geographic coverage.** Number of assets per geographic grouping; assets "
-        f"with no specified coverage are excluded. Africa and Global dominate, while Latin America "
-        f"& Caribbean, Asia, and Multi-regional are comparatively "
-        f"thin.]({fig('fig4_geographic_coverage.png', 'Figure 4')})"
+        f"**Figure 4. Geographic coverage.** Number of assets per geographic grouping; assets with "
+        f"no specified coverage are excluded. Hover a bar for the dominant domains and centres in "
+        f"that region. Africa and Global dominate; Latin America & Caribbean, Asia, and "
+        f"Multi-regional are comparatively thin."
     )
     W(f"")
     africa_n = s["geo_counts"].get("Africa", 0)
@@ -904,12 +912,14 @@ def build_report_body(assets, s, figures_prefix="figures"):
 
     W(f"### 6.4 Suggested integration pathway")
     W(f"")
+    W(f"<!--FIG8-->")
+    W(f"")
     W(
-        f"![**Figure 8. Suggested integration pathway.** Each asset is classified by a heuristic "
-        f"combining its access status and file format into a starting pathway: federate (ready, or "
-        f"with light ingest), ingest candidate, negotiate access, or assess. Bars show counts and "
-        f"the share of the portfolio. The classification is advisory and should be verified per "
-        f"asset before committing.]({fig('fig8_integration_pathway.png', 'Figure 8')})"
+        f"**Figure 8. Suggested integration pathway.** Each asset is classified by a heuristic "
+        f"combining its access status and file format into a starting pathway — federate (ready, or "
+        f"with light ingest), ingest candidate, negotiate access, or assess. Hover a bar for the "
+        f"file formats driving that pathway and example assets. The classification is advisory and "
+        f"should be verified per asset before committing."
     )
     W(f"")
     ic = s["integration_counts"]

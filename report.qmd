@@ -119,11 +119,62 @@ def itab(df):
          lengthMenu=[10, 25, 100], scrollX=True, allow_html=True, maxBytes=0,
          showIndex=False)
 
+# ---- Tooltip enrichment helpers --------------------------------------------
+# Tooltips should ADD what isn't already visible on the chart (which centres,
+# how much is open, example assets), not repeat the printed count.
+TOTAL = len(assets)
+
+def _topc(sub, k=3):
+    c = Counter(a["centre"].replace("_", "-") for a in sub)
+    return ", ".join(f"{n} ({v})" for n, v in c.most_common(k)) or "—"
+
+def _topd(sub, k=3):
+    c = Counter(a["domain_norm"] for a in sub if a["domain_norm"] != "Not specified")
+    return ", ".join(f"{n} ({v})" for n, v in c.most_common(k)) or "—"
+
+def _openpct(sub):
+    return round(100 * sum(1 for a in sub if a.get("access_norm") == "Open") / len(sub)) if sub else 0
+
+def _eg(sub, k=2):
+    return "; ".join((a.get("name") or "")[:36] for a in sub[:k]) or "—"
+
+def hbar(cats, vals, hover, color=BLUE, xtitle="Number of assets"):
+    f = go.Figure(go.Bar(
+        x=vals, y=cats, orientation="h", marker_color=color, customdata=hover,
+        hovertemplate="%{customdata}<extra></extra>", text=vals,
+        textposition="auto", cliponaxis=False))
+    style(f, height=max(250, 34 * len(cats) + 110),
+          xaxis=dict(title=xtitle), yaxis=dict(autorange="reversed"))
+    return f
+
 # Generate the narrative once, then split at the figure/table markers so the
 # interactive figures and tables below are injected at the right positions.
 body = build_report_body(assets, stats, figures_prefix="outputs/figures")
-seg = re.split(r"<!--(?:FIG1|FIG6|TABLE1|QUADRANT|TABLE2|ANNEXA)-->", body)
-seg += [""] * (7 - len(seg))   # guard if a marker is ever missing
+seg = re.split(r"<!--(?:FIG1|FIG2|FIG5|FIG3|FIG4|FIG6|TABLE1|QUADRANT|FIG8|TABLE2|ANNEXA)-->", body)
+seg += [""] * (12 - len(seg))   # guard if a marker is ever missing
+
+# Tables built once; rendered interactively (itables) in HTML and as static
+# Markdown tables in Word/PDF.
+def _nm(a):
+    return (a.get("name") or "")
+
+df_strategic = pd.DataFrame([{
+    "Centre": a["centre"].replace("_", "-"), "Rank": a.get("asset_rank") or "—",
+    "Asset": _nm(a), "Domain": a["domain_norm"], "Access": a["access_norm"],
+    "Justification": _why(a, 240)} for a in stats["strategic"]])
+df_actnow = pd.DataFrame([{
+    "Centre": a["centre"].replace("_", "-"), "Asset": _nm(a), "Domain": a["domain_norm"],
+    "Score": a.get("priority_score"), "Pathway": a.get("integration_hint", ""),
+    "Rationale": _why(a, 240)} for a in stats["ingest_now"]])
+df_annexa = pd.DataFrame([{
+    "Centre": a["centre"].replace("_", "-"), "Asset": _nm(a), "Domain": a["domain_norm"],
+    "Geography": a["geo_norm"], "Type": a.get("type_norm", ""),
+    "Score": a.get("priority_score"), "Access": a.get("access_norm", ""),
+    "Pathway": a.get("integration_hint", "")}
+    for a in sorted(assets, key=lambda x: -(x.get("priority_score") or 0))])
+
+def md_table(df):
+    display(Markdown(df.to_markdown(index=False)))
 ```
 
 **Version 1.0 (draft)** — `{python} stats["total"]` assets in this build. **Interactive data access:** [CDH interactive dashboard](docs/index.html).
@@ -139,17 +190,18 @@ seg += [""] * (7 - len(seg))   # guard if a marker is ever missing
 display(Markdown(seg[0]))
 ```
 
+::: {.content-visible when-format="html"}
 ```{python}
-#| label: fig-centres
 #| echo: false
-# Figure 1 — assets per centre, each bar split into one segment per nominator.
+# Figure 1 — assets per centre, split into one segment per nominator.
+# Tooltip adds WHO contributed (not visible from the bar alone).
 by_centre = defaultdict(lambda: defaultdict(int))
 totals = Counter()
 for a in assets:
     nm = (a.get("nominator") or "Unattributed").split("\n")[0].strip() or "Unattributed"
     by_centre[a["centre"]][nm] += 1
     totals[a["centre"]] += 1
-centres = sorted(totals, key=totals.get)        # ascending → largest on top
+centres = sorted(totals, key=totals.get)
 f1 = go.Figure()
 for c in centres:
     base = 0
@@ -167,6 +219,10 @@ style(f1, barmode="overlay",
                  categoryarray=[c.replace("_", "-") for c in centres]))
 f1
 ```
+:::
+::: {.content-visible unless-format="html"}
+![](outputs/figures/fig1_assets_per_centre.png)
+:::
 
 ```{python}
 #| echo: false
@@ -174,10 +230,126 @@ f1
 display(Markdown(seg[1]))
 ```
 
+::: {.content-visible when-format="html"}
 ```{python}
-#| label: fig-gap
 #| echo: false
-# Figure 6 — domain × geography coverage; hover for counts, red dot = gap.
+# Figure 2 — domain distribution. Tooltip adds % of portfolio, contributing
+# centres, and open-access share.
+_doms = [d for d, _ in Counter(a["domain_norm"] for a in assets
+                               if a["domain_norm"] != "Not specified").most_common()]
+_v, _h = [], []
+for d in _doms:
+    sub = [a for a in assets if a["domain_norm"] == d]
+    _v.append(len(sub))
+    _h.append(f"<b>{d}</b><br>{len(sub)} assets · {round(100*len(sub)/TOTAL)}% of portfolio"
+              f"<br>Centres: {_topc(sub)}<br>{_openpct(sub)}% open access")
+hbar(_doms, _v, _h)
+```
+:::
+::: {.content-visible unless-format="html"}
+![](outputs/figures/fig2_climate_domains.png)
+:::
+
+```{python}
+#| echo: false
+#| output: asis
+display(Markdown(seg[2]))
+```
+
+::: {.content-visible when-format="html"}
+```{python}
+#| echo: false
+# Figure 5 — centre × domain. Tooltip adds example assets and open share.
+HD = ["Adaptation Analytics", "Hazard", "Multi-domain", "Exposure", "Mitigation",
+      "Hazard / Climate Services", "Sensitivity", "Adaptive Capacity"]
+HD_SHORT = ["Adapt.<br>Analytics", "Hazard", "Multi-<br>domain", "Exposure", "Mitigation",
+            "Hazard /<br>Clim. Svc", "Sensitivity", "Adaptive<br>Cap."]
+CO = ["AfricaRice", "Alliance", "CIFOR_ICRAF", "CIP", "ICRISAT", "IFPRI",
+      "IITA", "ILRI", "IRRI", "IWMI", "WorldFish"]
+z5 = [[0] * len(HD) for _ in CO]
+cd5 = [[""] * len(HD) for _ in CO]
+for ri, c in enumerate(CO):
+    for ci, d in enumerate(HD):
+        sub = [a for a in assets if a["centre"] == c and a["domain_norm"] == d]
+        z5[ri][ci] = len(sub)
+        cd5[ri][ci] = (f"{len(sub)} asset(s) · {_openpct(sub)}% open<br>e.g. {_eg(sub)}"
+                       if sub else "none in this centre")
+f5 = go.Figure(go.Heatmap(
+    z=z5, x=HD_SHORT, y=[c.replace("_", "-") for c in CO], xgap=3, ygap=3, showscale=False,
+    colorscale=[[0, "#FFFFFF"], [0.18, "#DCEBFB"], [0.55, BLUE_LT], [1, BLUE]],
+    customdata=cd5, text=[[str(v) if v else "" for v in row] for row in z5],
+    texttemplate="%{text}", textfont=dict(size=10),
+    hovertemplate="<b>%{y} × %{x}</b><br>%{customdata}<extra></extra>"))
+style(f5, height=470, xaxis=dict(side="top", tickfont=dict(size=9)),
+      yaxis=dict(autorange="reversed"))
+f5
+```
+:::
+::: {.content-visible unless-format="html"}
+![](outputs/figures/fig5_heatmap_centre_domain.png)
+:::
+
+```{python}
+#| echo: false
+#| output: asis
+display(Markdown(seg[3]))
+```
+
+::: {.content-visible when-format="html"}
+```{python}
+#| echo: false
+# Figure 3 — asset type (ownership). Tooltip adds % share, centres, open share.
+_types = [t for t, _ in Counter(a["type_norm"] for a in assets if a.get("type_norm")).most_common()]
+_v, _h = [], []
+for t in _types:
+    sub = [a for a in assets if a.get("type_norm") == t]
+    _v.append(len(sub))
+    _h.append(f"<b>{t}</b><br>{len(sub)} assets · {round(100*len(sub)/TOTAL)}% of portfolio"
+              f"<br>Centres: {_topc(sub)}<br>{_openpct(sub)}% open access")
+hbar(_types, _v, _h)
+```
+:::
+::: {.content-visible unless-format="html"}
+![](outputs/figures/fig3_asset_types.png)
+:::
+
+```{python}
+#| echo: false
+#| output: asis
+display(Markdown(seg[4]))
+```
+
+::: {.content-visible when-format="html"}
+```{python}
+#| echo: false
+# Figure 4 — geographic coverage. Tooltip adds dominant domains and centres.
+GEO_ORDER = ["Africa", "Global", "Asia / South & SE Asia",
+             "Latin America & Caribbean", "Multi-regional"]
+_geos = [g for g in GEO_ORDER if any(a["geo_norm"] == g for a in assets)]
+_v, _h = [], []
+for g in _geos:
+    sub = [a for a in assets if a["geo_norm"] == g]
+    _v.append(len(sub))
+    _h.append(f"<b>{g}</b><br>{len(sub)} assets · {round(100*len(sub)/TOTAL)}% of portfolio"
+              f"<br>Top domains: {_topd(sub)}<br>Centres: {_topc(sub)}")
+hbar(_geos, _v, _h)
+```
+:::
+::: {.content-visible unless-format="html"}
+![](outputs/figures/fig4_geographic_coverage.png)
+:::
+
+```{python}
+#| echo: false
+#| output: asis
+display(Markdown(seg[5]))
+```
+
+::: {.content-visible when-format="html"}
+```{python}
+#| echo: false
+# Figure 6 — domain × geography. Tooltip adds the centres behind each cell and
+# its open-access share; red dot marks a true coverage gap.
 DOMAINS = ["Hazard", "Hazard / Climate Services", "Exposure", "Sensitivity",
            "Adaptive Capacity", "Adaptation Analytics", "Mitigation",
            "Climate Policy / Finance", "Multi-domain"]
@@ -186,54 +358,63 @@ GEOS = ["Africa", "Asia / South & SE Asia", "Latin America & Caribbean",
 GEO_SHORT = ["Africa", "Asia /<br>SE Asia", "Lat. Am. /<br>Caribbean",
              "Global", "Multi-<br>regional"]
 M = [[0] * len(GEOS) for _ in DOMAINS]
-for a in assets:
-    if a["domain_norm"] in DOMAINS and a["geo_norm"] in GEOS:
-        M[DOMAINS.index(a["domain_norm"])][GEOS.index(a["geo_norm"])] += 1
+CD = [[""] * len(GEOS) for _ in DOMAINS]
+for ri, d in enumerate(DOMAINS):
+    for ci, g in enumerate(GEOS):
+        sub = [a for a in assets if a["domain_norm"] == d and a["geo_norm"] == g]
+        M[ri][ci] = len(sub)
+        CD[ri][ci] = ("no assets — coverage gap" if not sub
+                      else f"{len(sub)} asset(s) · {_openpct(sub)}% open<br>Centres: {_topc(sub)}")
 f6 = go.Figure(go.Heatmap(
     z=M, x=GEO_SHORT, y=DOMAINS, xgap=3, ygap=3, showscale=False,
     colorscale=[[0, "#FFFFFF"], [0.18, "#DCEBFB"], [0.55, BLUE_LT], [1, BLUE]],
-    text=[[str(v) if v else "" for v in row] for row in M],
+    customdata=CD, text=[[str(v) if v else "" for v in row] for row in M],
     texttemplate="%{text}", textfont=dict(size=11),
-    hovertemplate="%{y} × %{x}: %{z} asset(s)<extra></extra>"))
-for ri, row in enumerate(M):                     # red dot on true gaps
+    hovertemplate="<b>%{y} × %{x}</b><br>%{customdata}<extra></extra>"))
+for ri, row in enumerate(M):
     for ci, v in enumerate(row):
         if v == 0:
             f6.add_annotation(x=GEO_SHORT[ci], y=DOMAINS[ri], text="•",
                               showarrow=False, font=dict(color="#D98273", size=13))
-style(f6, height=430, xaxis=dict(side="top", tickfont=dict(size=10)),
+style(f6, height=440, xaxis=dict(side="top", tickfont=dict(size=10)),
       yaxis=dict(autorange="reversed"))
 f6
 ```
+:::
+::: {.content-visible unless-format="html"}
+![](outputs/figures/fig6_gap_matrix.png)
+:::
 
 ```{python}
 #| echo: false
 #| output: asis
-display(Markdown(seg[2]))
+display(Markdown(seg[6]))
 ```
 
+::: {.content-visible when-format="html"}
 ```{python}
-#| label: tbl-strategic
 #| echo: false
-itab(pd.DataFrame([{
-    "Centre": a["centre"].replace("_", "-"),
-    "Rank": a.get("asset_rank") or "—",
-    "Asset": _link(a),
-    "Domain": a["domain_norm"],
-    "Access": a["access_norm"],
-    "Justification": _why(a),
-} for a in stats["strategic"]]))
+itab(df_strategic)
 ```
+:::
+::: {.content-visible unless-format="html"}
+```{python}
+#| echo: false
+#| output: asis
+md_table(df_strategic)
+```
+:::
 
 ```{python}
 #| echo: false
 #| output: asis
-display(Markdown(seg[3]))
+display(Markdown(seg[7]))
 ```
 
+::: {.content-visible when-format="html"}
 ```{python}
-#| label: fig-quadrant
 #| echo: false
-# Figure 7 — readiness × reuse; colour = access, hover for the asset.
+# Figure 7 — readiness × reuse; colour = access, hover identifies the asset.
 _jit = random.Random(42)
 qfig = go.Figure()
 for _acc, _col in ACCESS_COLOUR.items():
@@ -260,49 +441,84 @@ style(qfig, height=480, legend_title_text="Access",
       yaxis=dict(title="Reuse potential →", range=[0.15, 1.08]))
 qfig
 ```
+:::
+::: {.content-visible unless-format="html"}
+![](outputs/figures/fig7_priority_quadrant.png)
+:::
 
 ```{python}
 #| echo: false
 #| output: asis
-display(Markdown(seg[4]))
+display(Markdown(seg[8]))
 ```
 
-```{python}
-#| label: tbl-actnow
-#| echo: false
-itab(pd.DataFrame([{
-    "Centre": a["centre"].replace("_", "-"),
-    "Asset": _link(a),
-    "Domain": a["domain_norm"],
-    "Score": a.get("priority_score"),
-    "Pathway": a.get("integration_hint", ""),
-    "Rationale": _why(a),
-} for a in stats["ingest_now"]]))
-```
-
+::: {.content-visible when-format="html"}
 ```{python}
 #| echo: false
-#| output: asis
-display(Markdown(seg[5]))
+# Figure 8 — integration pathway. Tooltip adds the file formats driving each
+# pathway and example assets.
+PORDER = ["Federate — ready", "Federate or light ingest", "Ingest candidate",
+          "Negotiate access", "Assess"]
+PCOL = {"Federate — ready": "#2E7D52", "Federate or light ingest": "#0E9E83",
+        "Ingest candidate": BLUE_LT, "Negotiate access": "#C2691C", "Assess": "#7C8A99"}
+_paths = [p for p in PORDER if any(a.get("integration_hint") == p for a in assets)]
+_v, _h, _c = [], [], []
+for p in _paths:
+    sub = [a for a in assets if a.get("integration_hint") == p]
+    fmts = Counter((a.get("file_format") or "—").split(",")[0].strip()[:20] for a in sub)
+    _v.append(len(sub))
+    _c.append(PCOL[p])
+    _h.append(f"<b>{p}</b><br>{len(sub)} assets · {round(100*len(sub)/TOTAL)}% of portfolio"
+              f"<br>Formats: {', '.join(n for n, _ in fmts.most_common(3))}<br>e.g. {_eg(sub)}")
+hbar(_paths, _v, _h, color=_c)
 ```
-
-```{python}
-#| label: tbl-annexa
-#| echo: false
-itab(pd.DataFrame([{
-    "Centre": a["centre"].replace("_", "-"),
-    "Asset": _link(a),
-    "Domain": a["domain_norm"],
-    "Geography": a["geo_norm"],
-    "Type": a.get("type_norm", ""),
-    "Score": a.get("priority_score"),
-    "Access": a.get("access_norm", ""),
-    "Pathway": a.get("integration_hint", ""),
-} for a in sorted(assets, key=lambda x: -(x.get("priority_score") or 0))]))
-```
+:::
+::: {.content-visible unless-format="html"}
+![](outputs/figures/fig8_integration_pathway.png)
+:::
 
 ```{python}
 #| echo: false
 #| output: asis
-display(Markdown(seg[6]))
+display(Markdown(seg[9]))
+```
+
+::: {.content-visible when-format="html"}
+```{python}
+#| echo: false
+itab(df_actnow)
+```
+:::
+::: {.content-visible unless-format="html"}
+```{python}
+#| echo: false
+#| output: asis
+md_table(df_actnow)
+```
+:::
+
+```{python}
+#| echo: false
+#| output: asis
+display(Markdown(seg[10]))
+```
+
+::: {.content-visible when-format="html"}
+```{python}
+#| echo: false
+itab(df_annexa)
+```
+:::
+::: {.content-visible unless-format="html"}
+```{python}
+#| echo: false
+#| output: asis
+md_table(df_annexa)
+```
+:::
+
+```{python}
+#| echo: false
+#| output: asis
+display(Markdown(seg[11]))
 ```
