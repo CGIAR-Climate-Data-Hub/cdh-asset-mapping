@@ -667,28 +667,44 @@ function renderSankey(host) {
   const graph = sankey({ nodes: nodes.map((n) => ({ ...n })), links: links.map((l) => ({ ...l })) });
 
   const svg = d3.select(host).append("svg").attr("width", w).attr("height", h).attr("class", "flow-svg");
+  const pathColor = (n) => PATHWAY.find((p) => p.key === n.name)?.col || COL.unknown;
   const nodeColor = (n) => n.kind === "centre" ? centreColor(n.name)
-    : n.kind === "pathway" ? (PATHWAY.find((p) => p.key === n.name)?.col || COL.unknown)
-    : COL.blue;
+    : n.kind === "pathway" ? pathColor(n) : COL.blue;
+  // Left half (centre→domain) carries the centre colour; right half
+  // (domain→pathway) carries the PATHWAY colour so federate/negotiate/etc.
+  // read as meaning, not a wall of identical blue.
+  const linkColor = (l) => l.source.kind === "centre" ? centreColor(l.source.name) : pathColor(l.target);
+  const LINK_OP = 0.4;
 
-  svg.append("g").attr("fill", "none").selectAll("path")
+  const linkSel = svg.append("g").attr("fill", "none").selectAll("path")
     .data(graph.links).join("path")
     .attr("d", d3.sankeyLinkHorizontal())
-    .attr("stroke", (d) => nodeColor(d.source))
-    .attr("stroke-opacity", 0.32)
+    .attr("stroke", linkColor)
+    .attr("stroke-opacity", LINK_OP)
     .attr("stroke-width", (d) => Math.max(1, d.width))
     .on("mousemove", (e, d) => showTip(`<b>${esc(d.source.name)}</b> → <b>${esc(d.target.name)}</b><br>${d.value} asset${d.value > 1 ? "s" : ""}`, e))
-    .on("mouseleave", hideTip)
-    .style("mix-blend-mode", "multiply");
+    .on("mouseleave", hideTip);
+
+  // Hover a node → trace its whole flow: connected ribbons brighten, rest fade.
+  const touches = (l, n) => l.source === n || l.target === n;
+  function highlight(n) {
+    linkSel.attr("stroke-opacity", (l) => touches(l, n) ? 0.78 : 0.06);
+    rectSel.attr("opacity", (m) => m === n || graph.links.some((l) => touches(l, n) && touches(l, m)) ? 1 : 0.28);
+  }
+  function clearHighlight() {
+    linkSel.attr("stroke-opacity", LINK_OP);
+    rectSel.attr("opacity", 1);
+  }
 
   const gnode = svg.append("g").selectAll("g").data(graph.nodes).join("g");
-  gnode.append("rect")
+  const rectSel = gnode.append("rect")
     .attr("x", (d) => d.x0).attr("y", (d) => d.y0)
     .attr("width", (d) => d.x1 - d.x0).attr("height", (d) => Math.max(1, d.y1 - d.y0))
     .attr("fill", nodeColor).attr("rx", 2)
     .style("cursor", "pointer")
-    .on("mousemove", (e, d) => showTip(`<b>${esc(d.name)}</b><br>${d.value} asset${d.value > 1 ? "s" : ""}`, e))
-    .on("mouseleave", hideTip)
+    .on("mouseenter", (e, d) => highlight(d))
+    .on("mousemove", (e, d) => showTip(`<b>${esc(d.name)}</b><br>${d.value} asset${d.value > 1 ? "s" : ""}` + (d.field ? "<br><i>click to filter</i>" : ""), e))
+    .on("mouseleave", () => { hideTip(); clearHighlight(); })
     .on("click", (e, d) => { hideTip(); if (d.field) drillTo([[d.field, d.name]]); });
 
   gnode.append("text")
@@ -700,7 +716,8 @@ function renderSankey(host) {
     .text((d) => (d.y1 - d.y0) > 9 ? d.name : "");
 
   $("flowLegend").innerHTML =
-    `<span><span class="dot" style="background:${COL.blue}"></span>centre / domain</span>` +
+    `<span><span class="dot" style="background:${COL.blue}"></span>domain</span>` +
+    `<span class="flow-hint">centre = own colour · ribbon to pathway colour-coded:</span>` +
     PATHWAY.map((p) => `<span><span class="dot" style="background:${p.col}"></span>${esc(p.key)}</span>`).join("");
 }
 
