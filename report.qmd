@@ -433,10 +433,16 @@ itab(df_strategic, widths=["9%", "5%", "28%", "15%", "10%", "33%"])
 ```{=latex}
 \begin{landscape}\footnotesize
 ```
+```{=openxml}
+<w:p><w:pPr><w:sectPr><w:type w:val="nextPage"/><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:pPr></w:p>
+```
 ```{python}
 #| echo: false
 #| output: asis
 grid_table(df_strategic, [11, 4, 30, 15, 10, 46])
+```
+```{=openxml}
+<w:p><w:pPr><w:sectPr><w:pgSz w:w="15840" w:h="12240" w:orient="landscape"/><w:pgMar w:top="720" w:bottom="720" w:left="720" w:right="720"/></w:sectPr></w:pPr></w:p>
 ```
 ```{=latex}
 \end{landscape}
@@ -531,10 +537,16 @@ itab(df_actnow, widths=["9%", "27%", "15%", "6%", "14%", "29%"])
 ```{=latex}
 \begin{landscape}\footnotesize
 ```
+```{=openxml}
+<w:p><w:pPr><w:sectPr><w:type w:val="nextPage"/><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:pPr></w:p>
+```
 ```{python}
 #| echo: false
 #| output: asis
 grid_table(df_actnow, [11, 30, 15, 6, 14, 40])
+```
+```{=openxml}
+<w:p><w:pPr><w:sectPr><w:pgSz w:w="15840" w:h="12240" w:orient="landscape"/><w:pgMar w:top="720" w:bottom="720" w:left="720" w:right="720"/></w:sectPr></w:pPr></w:p>
 ```
 ```{=latex}
 \end{landscape}
@@ -557,10 +569,16 @@ itab(df_annexa, widths=["9%", "25%", "13%", "12%", "11%", "6%", "9%", "15%"])
 ```{=latex}
 \begin{landscape}\scriptsize
 ```
+```{=openxml}
+<w:p><w:pPr><w:sectPr><w:type w:val="nextPage"/><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:pPr></w:p>
+```
 ```{python}
 #| echo: false
 #| output: asis
 grid_table(df_annexa, [10, 30, 14, 13, 12, 5, 10, 14])
+```
+```{=openxml}
+<w:p><w:pPr><w:sectPr><w:pgSz w:w="15840" w:h="12240" w:orient="landscape"/><w:pgMar w:top="720" w:bottom="720" w:left="720" w:right="720"/></w:sectPr></w:pPr></w:p>
 ```
 ```{=latex}
 \end{landscape}

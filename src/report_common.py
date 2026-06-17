@@ -1244,10 +1244,16 @@ def build_report_body(assets, s, figures_prefix="figures"):
     W(f"### Feedback — corrections, additions, and questions")
     W(f"")
     W(
-        f"Spotted an error, or know of an asset that should be included? Please open a short "
-        f"issue — it goes straight to the team and is tracked to resolution. The links below "
-        f"open a pre-filled template:"
+        f"Spotted an error, or know of an asset that should be included? We want to hear it. "
+        f"**No GitHub account is needed** — use the feedback form; responses are routed "
+        f"automatically into the project's GitHub issue tracker so every item is triaged and "
+        f"resolved (pipeline documented in `FEEDBACK.md`)."
     )
+    W(f"")
+    if FEEDBACK_FORM_URL:
+        W(f"> 📝 **[Give feedback / suggest a correction or asset]({FEEDBACK_FORM_URL})** — 2-minute form, no login.")
+    else:
+        W(f"> 📝 **Feedback form:** *(link to be added once the Microsoft Form is published — see `FEEDBACK.md`).*")
     W(f"")
 
     def _issue(title, body, labels):
@@ -1255,28 +1261,18 @@ def build_report_body(assets, s, figures_prefix="figures"):
         return f"{REPO_URL}/issues/new?{q}"
 
     W(
-        f"- [**Correct an asset record**]("
+        f"If you do use GitHub, you can instead open a pre-filled issue directly: "
+        f"[correct a record]("
         + _issue("[correction] <asset name>",
                  "Asset name:\nCentre:\nField that is wrong:\nCorrect value:\nSource/evidence:\n",
-                 "correction") + ") — wrong domain, access, contact, etc."
-    )
-    W(
-        f"- [**Suggest a missing asset**]("
+                 "correction")
+        + "), [suggest a missing asset]("
         + _issue("[new asset] <asset name>",
                  "Asset name:\nCentre / owner:\nWhat it is:\nWhy strategic / reuse potential:\nURL or contact:\n",
-                 "new-asset") + ") — e.g. from a centre not yet represented."
-    )
-    W(
-        f"- [**General feedback on the report**]("
-        + _issue("[feedback] <topic>",
-                 "Section:\nComment or question:\n",
-                 "feedback") + ") — on framing, figures, or analysis."
-    )
-    W(f"")
-    W(
-        f"*(Opening an issue requires a free GitHub account. For richer inline discussion the "
-        f"repository can later enable GitHub Discussions with a Giscus comment box; issue links "
-        f"are used here because they produce tracked, actionable items.)*"
+                 "new-asset")
+        + "), or [general feedback]("
+        + _issue("[feedback] <topic>", "Section:\nComment or question:\n", "feedback")
+        + ")."
     )
     W(f"")
 
@@ -1340,6 +1336,9 @@ def build_report_body(assets, s, figures_prefix="figures"):
 #   - inline "Section 6.2" / "Annex C" mentions become links to those ids
 # ---------------------------------------------------------------------------
 REPO_URL = "https://github.com/CGIAR-Climate-Data-Hub/cdh-asset-mapping"
+# Set this to the published Microsoft Form URL once created (see FEEDBACK.md).
+# When empty, the report falls back to the GitHub issue links only.
+FEEDBACK_FORM_URL = ""
 
 
 def _linkify_crossrefs(lines):
@@ -1349,7 +1348,7 @@ def _linkify_crossrefs(lines):
     ref_sec = re.compile(r"\bSection (\d+(?:\.\d+)?)\b")
     ref_annex = re.compile(r"\bAnnex ([A-C])\b")
     # Backticked repo file paths -> links to the file on GitHub.
-    ref_code = re.compile(r"`((?:src|data|docs|dashboard)/[\w./-]+|report\.qmd)`")
+    ref_code = re.compile(r"`((?:src|data|docs|dashboard)/[\w./-]+|report\.qmd|FEEDBACK\.md|README\.md)`")
 
     in_fence = False
     out = []
