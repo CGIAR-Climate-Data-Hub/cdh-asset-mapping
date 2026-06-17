@@ -5,6 +5,7 @@ Shared helpers for report generation across Markdown and Quarto outputs.
 """
 
 import json
+import urllib.parse
 from collections import Counter
 from datetime import date
 from pathlib import Path
@@ -489,15 +490,16 @@ def build_report_body(assets, s, figures_prefix="figures"):
         f"(see Section 2.3 and Annex C)."
     )
     W(f"")
+    W(f"<!--FIG1-->")
+    W(f"")
     W(
-        f"![**Figure 1. Assets submitted per centre.** Total catalogued assets per centre after "
+        f"**Figure 1. Assets submitted per centre.** Total catalogued assets per centre after "
         f"consolidation (Section 2.3), ordered largest to smallest. Each bar is split into one "
         f"coloured segment per nominating individual — a longer run of colours means more "
         f"contributors behind a centre's portfolio (e.g. AfricaRice and IITA drew on many "
         f"nominators, while ILRI, IFPRI, and IRRI came through a single nominator). Segment colour "
         f"is arbitrary and carries no meaning (hence no legend); the number is the centre total. "
-        f"The interactive dashboard names each nominator and their count on "
-        f"hover.]({fig('fig1_assets_per_centre.png', 'Figure 1')})"
+        f"The interactive dashboard names each nominator and their count on hover."
     )
     W(f"")
     W(f"| Centre | Assets | Hub-funded |")
@@ -692,20 +694,16 @@ def build_report_body(assets, s, figures_prefix="figures"):
     W(f"")
     W(f"### 5.1 Domain × geography coverage")
     W(f"")
-    W(
-        f"![**Figure 6. Where coverage is deep, thin, or absent (climate domain × geography).** Each "
-        f"cell counts the assets in one domain (row) and geography (column); darker blue = more "
-        f"assets, a red dot = a true gap with none. Read across a row to see where a domain is "
-        f"covered, and down a column to see a region's spread. Two patterns stand out: coverage "
-        f"concentrates heavily in Africa and Global, and **Adaptive Capacity is empty across every "
-        f"region** while **Latin America & Caribbean** and **Multi-regional** are thin throughout — "
-        f"the clearest targets for the next cycle. Hybrid-domain and unspecified-geography assets "
-        f"are excluded for legibility.]({fig('fig6_gap_matrix.png', 'Figure 6')})"
-    )
+    W(f"<!--FIG6-->")
     W(f"")
     W(
-        f"*An interactive version of this matrix — with per-cell hover counts and click-to-filter "
-        f"into the asset list — is in the dashboard linked at the top of this report.*"
+        f"**Figure 6. Where coverage is deep, thin, or absent (climate domain × geography).** Each "
+        f"cell counts the assets in one domain (row) and geography (column); darker blue = more "
+        f"assets, a red dot = a true gap with none. Hover any cell for the exact count. Two patterns "
+        f"stand out: coverage concentrates heavily in Africa and Global, and **Adaptive Capacity is "
+        f"empty across every region** while **Latin America & Caribbean** and **Multi-regional** are "
+        f"thin throughout — the clearest targets for the next cycle. Hybrid-domain and "
+        f"unspecified-geography assets are excluded for legibility."
     )
     W(f"")
     dg = s["domain_geo"]
@@ -853,15 +851,9 @@ def build_report_body(assets, s, figures_prefix="figures"):
         W(f"")
         W(f"*Data-quality note: {'; '.join(notes)}. To be corrected with centres next cycle.*")
     W(f"")
-    W(f"*Table 1 — Strategic nominations: each centre's top-ranked assets. Asset names link to the data source where a URL was provided.*")
+    W(f"*Table 1 — Strategic nominations: each centre's top-ranked assets (sortable / filterable in HTML; asset names link to the data source).*")
     W(f"")
-    W(f"| Centre | Rank | Asset | Domain | Access | Centre justification |")
-    W(f"|---|---|---|---|---|---|")
-    for a in s["strategic"]:
-        W(
-            f"| {centre_label(a['centre'])} | {a.get('asset_rank') or '—'} | {linked(a)} | "
-            f"{a['domain_norm']} | {a.get('access_norm', '—')} | {short_why(a)} |"
-        )
+    W(f"<!--TABLE1-->")
     W(f"")
 
     W(f"### 6.3 Priority quadrant")
@@ -926,20 +918,13 @@ def build_report_body(assets, s, figures_prefix="figures"):
     inow = s["ingest_now"]
     W(
         f"**{len(inow)} assets** combine Open access, high technical readiness, and a priority "
-        f"score of 75+. These are the recommended near-term targets for federation or "
-        f"ingestion (top {min(len(inow), 15)} shown):"
+        f"score of 75+. These are the recommended near-term targets for federation or ingestion "
+        f"(all listed below; sort or filter the table in the HTML edition):"
     )
     W(f"")
-    W(f"*Table 2 — 'Act now' shortlist: Open-access, high-readiness assets. Asset names link to the data source.*")
+    W(f"*Table 2 — 'Act now' shortlist: Open-access, high-readiness assets (sortable / filterable in HTML; asset names link to the data source).*")
     W(f"")
-    W(f"| Centre | Asset | Domain | Pathway | Rationale |")
-    W(f"|---|---|---|---|---|")
-    for a in inow[:15]:
-        name, why = action_row(a)
-        W(
-            f"| {centre_label(a['centre'])} | {name} | "
-            f"{a['domain_norm']} | {a.get('integration_hint', '')} | {why} |"
-        )
+    W(f"<!--TABLE2-->")
     W(f"")
 
     W(f"### 6.6 Next cycle — high value, currently blocked")
@@ -1173,24 +1158,85 @@ def build_report_body(assets, s, figures_prefix="figures"):
 
     W(f"---")
     W(f"")
+    W(f"## Data Access, Feedback and Reproducibility")
+    W(f"")
+    W(
+        f"This report is generated programmatically: every figure, table, and statistic is "
+        f"computed from the normalised data, with no hand-typed numbers. The data and the code "
+        f"that produces this document are version-controlled and open."
+    )
+    W(f"")
+    W(f"**Data**")
+    W(f"")
+    W(f"- Normalised catalogue (one row per asset): `data/normalized/assets.json`")
+    W(f"- Raw centre submissions (Excel, one per centre): `data/submissions/`")
+    W(f"- Consolidation/merge log: `data/merge_log.json`")
+    W(f"- Researched contact overrides: `data/contact_overrides.json`")
+    W(f"")
+    W(f"**Code that generates this report**")
+    W(f"")
+    W(f"- `src/ingest.py` — reads the Excel submissions, normalises fields, writes `data/normalized/assets.json`")
+    W(f"- `src/figures.py` — generates the static figures")
+    W(f"- `src/report_common.py` — computes all statistics and builds the narrative, tables, and figure captions")
+    W(f"- `report.qmd` — the Quarto source for this document (the interactive figures and tables are defined here)")
+    W(f"- Full repository: <{REPO_URL}>")
+    W(f"")
+    W(f"**Reproduce this report**")
+    W(f"")
+    W(f"```bash")
+    W(f"pip install -r requirements.txt")
+    W(f"python src/ingest.py        # Excel submissions -> data/normalized/assets.json")
+    W(f"python src/figures.py       # static figures -> outputs/figures/")
+    W(f"quarto render report.qmd --to html   # or: --to docx")
+    W(f"```")
+    W(f"")
+    W(f"### Feedback — corrections, additions, and questions")
+    W(f"")
+    W(
+        f"Spotted an error, or know of an asset that should be included? Please open a short "
+        f"issue — it goes straight to the team and is tracked to resolution. The links below "
+        f"open a pre-filled template:"
+    )
+    W(f"")
+
+    def _issue(title, body, labels):
+        q = urllib.parse.urlencode({"title": title, "body": body, "labels": labels})
+        return f"{REPO_URL}/issues/new?{q}"
+
+    W(
+        f"- [**Correct an asset record**]("
+        + _issue("[correction] <asset name>",
+                 "Asset name:\nCentre:\nField that is wrong:\nCorrect value:\nSource/evidence:\n",
+                 "correction") + ") — wrong domain, access, contact, etc."
+    )
+    W(
+        f"- [**Suggest a missing asset**]("
+        + _issue("[new asset] <asset name>",
+                 "Asset name:\nCentre / owner:\nWhat it is:\nWhy strategic / reuse potential:\nURL or contact:\n",
+                 "new-asset") + ") — e.g. from a centre not yet represented."
+    )
+    W(
+        f"- [**General feedback on the report**]("
+        + _issue("[feedback] <topic>",
+                 "Section:\nComment or question:\n",
+                 "feedback") + ") — on framing, figures, or analysis."
+    )
+    W(f"")
+    W(
+        f"*(Opening an issue requires a free GitHub account. For richer inline discussion the "
+        f"repository can later enable GitHub Discussions with a Giscus comment box; issue links "
+        f"are used here because they produce tracked, actionable items.)*"
+    )
+    W(f"")
+
+    W(f"---")
+    W(f"")
     W(f"## Annex A — Full asset list")
     W(f"")
-    W(f"| # | Centre | Asset Name | Domain | Geo | Type | Score | Access | Pathway |")
-    W(f"|---|---|---|---|---|---|---|---|---|")
-    for i, a in enumerate(
-        sorted(assets, key=lambda x: -(x.get("priority_score") or 0)), 1
-    ):
-        name = a["name"].replace("|", "\\|")[:55]
-        domain = a["domain_norm"] or ""
-        geo = a["geo_norm"] or ""
-        atype = (a["type_norm"] or "").replace("CGIAR-produced", "CGIAR")
-        score = a.get("priority_score") if a.get("priority_score") is not None else "—"
-        access = a.get("access_norm", "—")
-        path = a.get("integration_hint", "—")
-        W(
-            f"| {i} | {centre_label(a['centre'])} | {name} | {domain} | {geo} | "
-            f"{atype} | {score} | {access} | {path} |"
-        )
+    W(f"*All {s['total']} catalogued assets, sortable and filterable in the HTML edition. "
+      f"Use the search box to find a centre, domain, or asset.*")
+    W(f"")
+    W(f"<!--ANNEXA-->")
     W(f"")
 
     W(f"---")
@@ -1242,15 +1288,25 @@ def build_report_body(assets, s, figures_prefix="figures"):
 #   - "Annex C" headings get {#annex-c}
 #   - inline "Section 6.2" / "Annex C" mentions become links to those ids
 # ---------------------------------------------------------------------------
+REPO_URL = "https://github.com/CGIAR-Climate-Data-Hub/cdh-asset-mapping"
+
+
 def _linkify_crossrefs(lines):
     import re
     head_num = re.compile(r"^(#{2,3}) (\d+(?:\.\d+)?)([ .].*)$")
     head_annex = re.compile(r"^(#{2,3}) Annex ([A-C])\b(.*)$")
     ref_sec = re.compile(r"\bSection (\d+(?:\.\d+)?)\b")
     ref_annex = re.compile(r"\bAnnex ([A-C])\b")
+    # Backticked repo file paths -> links to the file on GitHub.
+    ref_code = re.compile(r"`((?:src|data|docs|dashboard)/[\w./-]+|report\.qmd)`")
 
+    in_fence = False
     out = []
     for ln in lines:
+        if ln.lstrip().startswith("```"):
+            in_fence = not in_fence
+            out.append(ln)
+            continue
         if ln.startswith("#"):
             m = head_num.match(ln)
             if m:
@@ -1262,9 +1318,12 @@ def _linkify_crossrefs(lines):
                 out.append(f"{m.group(1)} Annex {m.group(2)}{m.group(3)} {{#annex-{m.group(2).lower()}}}")
                 continue
             out.append(ln)
+        elif in_fence:
+            out.append(ln)
         else:
             ln = ref_sec.sub(lambda m: f"[Section {m.group(1)}](#sec-{m.group(1).replace('.', '-')})", ln)
             ln = ref_annex.sub(lambda m: f"[Annex {m.group(1)}](#annex-{m.group(1).lower()})", ln)
+            ln = ref_code.sub(lambda m: f"[`{m.group(1)}`]({REPO_URL}/blob/main/{m.group(1)})", ln)
             out.append(ln)
     return "\n".join(out)
 

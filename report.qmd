@@ -7,7 +7,7 @@ format:
     toc: true
     toc-depth: 3
     number-sections: false
-    embed-resources: true
+    embed-resources: false
     include-in-header:
       text: |
         <style>
@@ -69,59 +69,173 @@ execute:
 ---
 
 ```{python}
-#| echo: true
-#| code-fold: true
-#| code-summary: "Show code"
+#| echo: false
 # This document is a reproducible notebook: load the normalised data and compute
 # all statistics once, then generate every section, figure, and table from them.
 import pathlib
 import sys
+import re
+import random
+from collections import Counter, defaultdict
 from IPython.display import Markdown, display
+import pandas as pd
+import plotly.graph_objects as go
+from itables import init_notebook_mode, show
 
 sys.path.insert(0, str(pathlib.Path.cwd() / "src"))
 from report_common import build_report_body, compute_stats, load
 
 assets, merge_log = load()
 stats = compute_stats(assets, merge_log)
+init_notebook_mode(all_interactive=True)
+
+# ---- Shared report styling -------------------------------------------------
+INK, GREEN, BLUE, BLUE_LT = "#0F1F2B", "#033529", "#1955A6", "#63A9FE"
+ACCESS_COLOUR = {"Open": "#1F8A70", "Restricted": "#C2691C", "Unknown": "#7C8A99"}
+SEG_PALETTE = ["#1955A6", "#1F8A70", "#E0A11B", "#63A9FE", "#C2691C", "#17B89B",
+               "#7D8CC4", "#8B5CF6", "#2E7D52", "#EC4899", "#5C6B73", "#AE6C7A",
+               "#4A90D9", "#F4B942"]
+FONT = "IBM Plex Sans, Source Sans 3, system-ui, sans-serif"
+
+def style(fig, height=460, **kw):
+    fig.update_layout(template="simple_white", height=height,
+                      font=dict(family=FONT, size=12, color=INK),
+                      title_font=dict(family=FONT, color=GREEN),
+                      paper_bgcolor="white", plot_bgcolor="white",
+                      margin=dict(l=70, r=24, t=34, b=52), **kw)
+    return fig
+
+def _link(a):
+    nm = a.get("name", "")
+    return f'<a href="{a["url"]}" target="_blank">{nm}</a>' if a.get("url") else nm
+
+def _why(a, n=300):
+    return (a.get("justification") or a.get("primary_use_case") or a.get("short_description") or "")[:n]
+
+def itab(df):
+    show(df, classes="display compact", column_filters="header", paging=True,
+         lengthMenu=[10, 25, 100], scrollX=True, allow_html=True, maxBytes=0,
+         showIndex=False)
+
+# Generate the narrative once, then split at the figure/table markers so the
+# interactive figures and tables below are injected at the right positions.
+body = build_report_body(assets, stats, figures_prefix="outputs/figures")
+seg = re.split(r"<!--(?:FIG1|FIG6|TABLE1|QUADRANT|TABLE2|ANNEXA)-->", body)
+seg += [""] * (7 - len(seg))   # guard if a marker is ever missing
 ```
 
 **Version 1.0 (draft)** — `{python} stats["total"]` assets in this build. **Interactive data access:** [CDH interactive dashboard](docs/index.html).
 
-> **Reproducibility.** Every figure, table, and statistic in this report is generated directly
-> from the data — none are hand-typed. The code behind any step can be read by expanding its
-> **▸ Show code** block, and the complete pipeline (Excel → `assets.json` → figures → this
-> report) lives in the
-> [project repository](https://github.com/CGIAR-Climate-Data-Hub/cdh-asset-mapping).
+> Generated programmatically from the data — no numbers are hand-typed. The figures and tables
+> below are interactive (hover, sort, filter) in this HTML edition. See **Data Access, Feedback
+> and Reproducibility** near the end for the source code, steps to reproduce, and how to suggest
+> corrections or additions.
 
 ```{python}
-#| label: report-body-pre
-#| echo: true
-#| code-fold: true
-#| code-summary: "Show the code that generates this report"
+#| echo: false
 #| output: asis
-# The narrative, every statistic, and every table are generated from
-# data/normalized/assets.json by build_report_body() in src/report_common.py —
-# no numbers are hand-typed. The body is split at the priority-quadrant marker
-# so the interactive plot (next cell) can be injected at Section 6.3.
-body = build_report_body(assets, stats, figures_prefix="outputs/figures")
-pre, _, post = body.partition("<!--QUADRANT-->")
-display(Markdown(pre))
+display(Markdown(seg[0]))
+```
+
+```{python}
+#| label: fig-centres
+#| echo: false
+# Figure 1 — assets per centre, each bar split into one segment per nominator.
+by_centre = defaultdict(lambda: defaultdict(int))
+totals = Counter()
+for a in assets:
+    nm = (a.get("nominator") or "Unattributed").split("\n")[0].strip() or "Unattributed"
+    by_centre[a["centre"]][nm] += 1
+    totals[a["centre"]] += 1
+centres = sorted(totals, key=totals.get)        # ascending → largest on top
+f1 = go.Figure()
+for c in centres:
+    base = 0
+    for i, (nm, cnt) in enumerate(sorted(by_centre[c].items(), key=lambda x: -x[1])):
+        f1.add_bar(y=[c.replace("_", "-")], x=[cnt], base=base, orientation="h",
+                   width=0.7, marker_color=SEG_PALETTE[i % len(SEG_PALETTE)],
+                   showlegend=False,
+                   hovertemplate=f"<b>{nm}</b>: {cnt} asset(s)<extra></extra>")
+        base += cnt
+    f1.add_annotation(x=base, y=c.replace("_", "-"), text=str(base), showarrow=False,
+                      xshift=11, font=dict(size=11, color=INK))
+style(f1, barmode="overlay",
+      xaxis=dict(title="Number of assets (bar split by nominator)"),
+      yaxis=dict(categoryorder="array",
+                 categoryarray=[c.replace("_", "-") for c in centres]))
+f1
+```
+
+```{python}
+#| echo: false
+#| output: asis
+display(Markdown(seg[1]))
+```
+
+```{python}
+#| label: fig-gap
+#| echo: false
+# Figure 6 — domain × geography coverage; hover for counts, red dot = gap.
+DOMAINS = ["Hazard", "Hazard / Climate Services", "Exposure", "Sensitivity",
+           "Adaptive Capacity", "Adaptation Analytics", "Mitigation",
+           "Climate Policy / Finance", "Multi-domain"]
+GEOS = ["Africa", "Asia / South & SE Asia", "Latin America & Caribbean",
+        "Global", "Multi-regional"]
+GEO_SHORT = ["Africa", "Asia /<br>SE Asia", "Lat. Am. /<br>Caribbean",
+             "Global", "Multi-<br>regional"]
+M = [[0] * len(GEOS) for _ in DOMAINS]
+for a in assets:
+    if a["domain_norm"] in DOMAINS and a["geo_norm"] in GEOS:
+        M[DOMAINS.index(a["domain_norm"])][GEOS.index(a["geo_norm"])] += 1
+f6 = go.Figure(go.Heatmap(
+    z=M, x=GEO_SHORT, y=DOMAINS, xgap=3, ygap=3, showscale=False,
+    colorscale=[[0, "#FFFFFF"], [0.18, "#DCEBFB"], [0.55, BLUE_LT], [1, BLUE]],
+    text=[[str(v) if v else "" for v in row] for row in M],
+    texttemplate="%{text}", textfont=dict(size=11),
+    hovertemplate="%{y} × %{x}: %{z} asset(s)<extra></extra>"))
+for ri, row in enumerate(M):                     # red dot on true gaps
+    for ci, v in enumerate(row):
+        if v == 0:
+            f6.add_annotation(x=GEO_SHORT[ci], y=DOMAINS[ri], text="•",
+                              showarrow=False, font=dict(color="#D98273", size=13))
+style(f6, height=430, xaxis=dict(side="top", tickfont=dict(size=10)),
+      yaxis=dict(autorange="reversed"))
+f6
+```
+
+```{python}
+#| echo: false
+#| output: asis
+display(Markdown(seg[2]))
+```
+
+```{python}
+#| label: tbl-strategic
+#| echo: false
+itab(pd.DataFrame([{
+    "Centre": a["centre"].replace("_", "-"),
+    "Rank": a.get("asset_rank") or "—",
+    "Asset": _link(a),
+    "Domain": a["domain_norm"],
+    "Access": a["access_norm"],
+    "Justification": _why(a),
+} for a in stats["strategic"]]))
+```
+
+```{python}
+#| echo: false
+#| output: asis
+display(Markdown(seg[3]))
 ```
 
 ```{python}
 #| label: fig-quadrant
-#| echo: true
-#| code-fold: true
-#| code-summary: "Show the interactive figure code"
-import random
-import plotly.graph_objects as go
-
-ACCESS_COLOUR = {"Open": "#1F8A70", "Restricted": "#C2691C", "Unknown": "#7C8A99"}
+#| echo: false
+# Figure 7 — readiness × reuse; colour = access, hover for the asset.
 _jit = random.Random(42)
 qfig = go.Figure()
 for _acc, _col in ACCESS_COLOUR.items():
-    _pts = [a for a in assets
-            if a.get("access_norm") == _acc
+    _pts = [a for a in assets if a.get("access_norm") == _acc
             and a.get("score_components", {}).get("technical_readiness") is not None
             and a.get("score_components", {}).get("reuse_potential") is not None]
     qfig.add_trace(go.Scatter(
@@ -135,22 +249,58 @@ for _acc, _col in ACCESS_COLOUR.items():
                        "<br>Access: %{customdata[3]} · Priority: %{customdata[4]}<extra></extra>"),
     ))
 qfig.add_shape(type="rect", x0=0.7, y0=0.7, x1=1.06, y1=1.06,
-               fillcolor="rgba(31,138,112,0.08)", line_width=0, layer="below")
-qfig.add_annotation(x=1.05, y=1.05, text="Quick wins", showarrow=False,
-                    xanchor="right", font=dict(color="#1F8A70", size=11))
-qfig.update_layout(
-    height=470, template="simple_white",
-    xaxis=dict(title="Technical readiness →", range=[0.15, 1.08]),
-    yaxis=dict(title="Reuse potential →", range=[0.15, 1.08]),
-    legend_title_text="Access", margin=dict(l=60, r=20, t=20, b=50))
+               fillcolor="rgba(31,138,112,0.20)", line=dict(color="#1F8A70", width=1, dash="dot"),
+               layer="below")
+qfig.add_annotation(x=1.04, y=1.04, text="<b>Quick wins</b>", showarrow=False,
+                    xanchor="right", font=dict(color="#1F8A70", size=12))
+style(qfig, height=480, legend_title_text="Access",
+      xaxis=dict(title="Technical readiness →", range=[0.15, 1.08]),
+      yaxis=dict(title="Reuse potential →", range=[0.15, 1.08]))
 qfig
 ```
 
 ```{python}
-#| label: report-body-post
-#| echo: true
-#| code-fold: true
-#| code-summary: "Show code"
+#| echo: false
 #| output: asis
-display(Markdown(post))
+display(Markdown(seg[4]))
+```
+
+```{python}
+#| label: tbl-actnow
+#| echo: false
+itab(pd.DataFrame([{
+    "Centre": a["centre"].replace("_", "-"),
+    "Asset": _link(a),
+    "Domain": a["domain_norm"],
+    "Score": a.get("priority_score"),
+    "Pathway": a.get("integration_hint", ""),
+    "Rationale": _why(a),
+} for a in stats["ingest_now"]]))
+```
+
+```{python}
+#| echo: false
+#| output: asis
+display(Markdown(seg[5]))
+```
+
+```{python}
+#| label: tbl-annexa
+#| echo: false
+itab(pd.DataFrame([{
+    "Centre": a["centre"].replace("_", "-"),
+    "Asset": _link(a),
+    "Domain": a["domain_norm"],
+    "Geography": a["geo_norm"],
+    "Type": a.get("type_norm", ""),
+    "Score": a.get("priority_score"),
+    "Access": a.get("access_norm", ""),
+    "Pathway": a.get("integration_hint", ""),
+} for a in sorted(assets, key=lambda x: -(x.get("priority_score") or 0))]))
+```
+
+```{python}
+#| echo: false
+#| output: asis
+display(Markdown(seg[6]))
 ```
