@@ -63,9 +63,15 @@ In GitHub: open `https://github.com/CGIAR-Climate-Data-Hub/cdh-asset-mapping/lab
 6. In the trigger card, click the **Form Id** box → select
    **CDH Asset Mapping — feedback** from the dropdown.
 
+> **Adding a step:** in the current designer there is no "+ New step" button.
+> Click the small **＋** icon on the vertical line **below the last card** →
+> an **Add an action** panel opens → search the connector there. (The older
+> "classic" designer shows a **+ New step** button at the bottom instead —
+> same thing. "Add an action" below = that.)
+
 ### 3.3 Get the answers
 
-7. Click **+ New step**.
+7. Click the **＋** below the trigger card → **Add an action**.
 8. Search `Forms` → choose **Microsoft Forms — Get response details**.
 9. **Form Id:** select **CDH Asset Mapping — feedback** again.
 10. Click the **Response Id** box → in the dynamic-content panel that opens,
@@ -73,7 +79,7 @@ In GitHub: open `https://github.com/CGIAR-Climate-Data-Hub/cdh-asset-mapping/lab
 
 ### 3.4 Create the GitHub issue
 
-11. Click **+ New step**.
+11. Click the **＋** below "Get response details" → **Add an action**.
 12. Search `GitHub` → choose **GitHub — Create an issue**.
 13. First use only: click **Sign in**, authorise the GitHub account.
 14. Fill the fields (use the dynamic-content panel to insert the bracketed
@@ -105,8 +111,9 @@ In GitHub: open `https://github.com/CGIAR-Climate-Data-Hub/cdh-asset-mapping/lab
 
 Without this step, issues get no label. To auto-label:
 
-15. **Between** "Get response details" and "Create an issue", click **+ New
-    step** → search `Control` → choose **Switch**.
+15. **Between** "Get response details" and "Create an issue", click the **＋**
+    on the line between those two cards → **Add an action** → search `Control`
+    → choose **Switch**.
 16. **On:** insert **What kind of feedback is this?** (dynamic content).
 17. Add three cases (**+ Add** → **Add case**), Equals these exact values:
     - `Correct a record`
