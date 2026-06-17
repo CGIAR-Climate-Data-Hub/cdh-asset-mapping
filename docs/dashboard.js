@@ -69,6 +69,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   state.assets = (await res.json()).map(deriveAsset);
   const hash = (location.hash || "").replace("#", "");
   if (VIEWS.includes(hash)) state.view = hash;
+  const fp = new URLSearchParams(location.search).get("flow");
+  if (fp === "network" || fp === "sankey") {
+    state.flowMode = fp;
+    document.querySelectorAll("#flowModeToggle .seg").forEach((b) => b.classList.toggle("is-active", b.dataset.flow === fp));
+  }
   buildRail();
   wireChrome();
   switchView(state.view);
@@ -764,9 +769,14 @@ function renderNetwork(host) {
     .on("mousemove", (e, d) => showTip(`<b>${esc(d.source.name)}</b> → <b>${esc(d.target.name)}</b><br>${d.v} asset${d.v > 1 ? "s" : ""}`, e))
     .on("mouseleave", hideTip);
 
-  // Adjacency for neighbourhood tracing.
+  // Adjacency for neighbourhood tracing. NB: at this point link.source/target
+  // are still numeric indices — d3.forceLink rewrites them to node objects
+  // later — so resolve through nodes[] here.
   const neighbours = new Map(nodes.map((n) => [n, new Set([n])]));
-  links.forEach((l) => { neighbours.get(l.source).add(l.target); neighbours.get(l.target).add(l.source); });
+  links.forEach((l) => {
+    const s = nodes[l.source], t = nodes[l.target];
+    neighbours.get(s).add(t); neighbours.get(t).add(s);
+  });
   let focus = null;   // pinned node (click) — survives mouse-out
 
   const g = svg.append("g").selectAll("g").data(nodes).join("g").style("cursor", "pointer")
