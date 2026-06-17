@@ -114,10 +114,13 @@ def _link(a):
 def _why(a, n=300):
     return (a.get("justification") or a.get("primary_use_case") or a.get("short_description") or "")[:n]
 
-def itab(df):
-    show(df, classes="display compact", column_filters="header", paging=True,
-         lengthMenu=[10, 25, 100], scrollX=True, allow_html=True, maxBytes=0,
-         showIndex=False)
+def itab(df, page=100):
+    # No horizontal scroll: fit the page width and let text wrap. Show up to
+    # `page` rows per page (tables 1 & 2 fit on one page); pager only if longer.
+    show(df, classes="display compact", column_filters="header",
+         paging=len(df) > page, lengthMenu=[page, 25, 50],
+         scrollX=False, autoWidth=False, style="width:100%",
+         maxBytes=0, showIndex=False)
 
 # ---- Tooltip enrichment helpers --------------------------------------------
 # Tooltips should ADD what isn't already visible on the chart (which centres,
