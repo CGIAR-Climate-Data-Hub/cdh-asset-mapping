@@ -375,6 +375,14 @@ function renderInsights() {
 }
 
 const scoreColor = (s) => s >= 78 ? COL.open : s >= 65 ? COL.gold : COL.restricted;
+const NOMINATOR_DISPLAY_OVERRIDES = {
+  "a.urfels@cgiar.org": "Anton Urfels",
+};
+function displayNominator(raw) {
+  const first = (raw || "").split("\n")[0].trim();
+  if (!first) return "Unattributed";
+  return NOMINATOR_DISPLAY_OVERRIDES[first] || first;
+}
 
 // Palette for nominator segments (identity is incidental — no legend; the
 // nominator + count is revealed on hover).
@@ -388,7 +396,7 @@ function renderCentreStrength() {
     const m = map[a.centre];
     m.n++;
     if (a.priority_score != null) { m.sum += a.priority_score; m.k++; }
-    const nm = (a.nominator || "Unattributed").split("\n")[0].trim() || "Unattributed";
+    const nm = displayNominator(a.nominator);
     m.noms[nm] = (m.noms[nm] || 0) + 1;
   });
   const rows = Object.entries(map).map(([c, m]) => ({
@@ -1027,7 +1035,7 @@ function openDrawer(a) {
       ${row("CGIAR programmes using", a.cgiar_programs)}${row("Partners / projects", a.partners)}
       ${row("National relevance", a.national_relevance)}</div>
     <div class="drawer-group"><h5>Context</h5>
-      ${row("Nominator", a.nominator)}${row("Organisation", a.asset_organization)}</div>
+      ${row("Nominator", displayNominator(a.nominator))}${row("Organisation", a.asset_organization)}</div>
     <div class="drawer-group"><h5>Access &amp; contact</h5>
       <div class="drawer-actions">
         ${a.url ? `<a class="drawer-cta" href="${esc(a.url)}" target="_blank" rel="noopener">🔗 Open data source ↗</a>`

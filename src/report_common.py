@@ -15,6 +15,25 @@ ASSETS_PATH = ROOT / "data" / "normalized" / "assets.json"
 MERGE_LOG = ROOT / "data" / "merge_log.json"
 
 HUB_FUNDED = {"Alliance", "IITA", "ILRI", "IFPRI", "IWMI", "WorldFish"}
+NOMINATOR_DISPLAY_OVERRIDES = {
+    "a.urfels@cgiar.org": "Anton Urfels",
+}
+ACKNOWLEDGMENT_CONTRIBUTOR_OVERRIDES = {
+    "CIFOR_ICRAF": {"Sufiet Erlita"},
+    "ICRISAT": {"Mamta Sharma", "Raman Babu"},
+    "IRRI": {"Emma Quicho-Diangkinay"},
+    "WorldFish": {"Thomas Kirina"},
+}
+ACKNOWLEDGMENT_COORDINATORS = {
+    "AfricaRice": {"Elliott Dossou-Yovo"},
+    "Alliance": {"Xiaojing Wei"},
+    "CIFOR_ICRAF": {"Sufiet Erlita"},
+    "CIP": {"Henry Juarez"},
+    "ICRISAT": {"Mamta Sharma", "Raman Babu"},
+    "IITA": {"Francis Muthoni"},
+    "IRRI": {"Emma Quicho-Diangkinay"},
+    "IWMI": {"Giriraj Amarnath"},
+}
 
 
 def pct(n, total):
@@ -23,6 +42,19 @@ def pct(n, total):
 
 def centre_label(c):
     return c.replace("_", "-")
+
+
+def display_nominator(raw, fallback="Unattributed"):
+    first = (raw or "").split("\n")[0].strip().rstrip(",")
+    if not first:
+        return fallback
+    return NOMINATOR_DISPLAY_OVERRIDES.get(first, first)
+
+
+def format_ack_contributor(centre, name):
+    if name in ACKNOWLEDGMENT_COORDINATORS.get(centre, set()):
+        return f"**{name}**"
+    return name
 
 
 def load():
@@ -1195,14 +1227,29 @@ def build_report_body(assets, s, figures_prefix="figures"):
     for a in assets:
         nm = a.get("nominator")
         if nm:
-            first = nm.split("\n")[0].strip().rstrip(",")
+            first = display_nominator(nm, fallback="")
             if first:
                 noms.setdefault(a["centre"], set()).add(first)
+    for centre, people in ACKNOWLEDGMENT_CONTRIBUTOR_OVERRIDES.items():
+        noms.setdefault(centre, set()).update(people)
+    W(f"*Coordinator names are shown in bold in the table below.*")
+    W(f"")
+    W(f"::: {{.ack-table}}")
     W(f"| Centre | Contributors |")
     W(f"|---|---|")
     for c in sorted(noms):
-        people = "; ".join(sorted(noms[c]))
+        people = "; ".join(
+            format_ack_contributor(c, name)
+            for name in sorted(noms[c])
+        )
         W(f"| {centre_label(c)} | {people} |")
+    W(f":::")
+    W(f"")
+    W(
+        f"*IRRI note:* Emma Quicho-Diangkinay coordinated the IRRI submission. The current "
+        f"submission records list Anton Urfels as nominator on the catalogued items, but broader "
+        f"IRRI contributor attribution is being checked and may be updated after review."
+    )
     W(f"")
     W(
         f"Coordination of the asset-mapping exercise is led by the Alliance of Bioversity "

@@ -24,6 +24,8 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import numpy as np
 
+from report_common import display_nominator
+
 ROOT        = Path(__file__).parent.parent
 ASSETS_PATH = ROOT / "data" / "normalized" / "assets.json"
 OUT_DIR     = ROOT / "outputs" / "figures"
@@ -129,7 +131,7 @@ def fig1_assets_per_centre(assets):
     totals = Counter()
     for a in assets:
         c = a["centre"]
-        nm = (a.get("nominator") or "Unattributed").split("\n")[0].strip() or "Unattributed"
+        nm = display_nominator(a.get("nominator"))
         by_centre[c][nm] += 1
         totals[c] += 1
     # Ascending so the largest centre sits at the top of the horizontal bars.
