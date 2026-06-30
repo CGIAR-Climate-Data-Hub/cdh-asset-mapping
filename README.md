@@ -6,7 +6,7 @@ Reproducible pipeline for CGIAR Climate Data Hub system-wide asset mapping exerc
 
 | | |
 |---|---|
-| 📊 **Interactive dashboard** | https://cgiar-climate-data-hub.github.io/cdh-asset-mapping/ |
+| 📊 **Interactive dashboard** | https://cgiar-climate-data-hub.github.io/cdh-asset-mapping/#overview |
 | 📄 **Full report** | https://cgiar-climate-data-hub.github.io/cdh-asset-mapping/report.html |
 | 💻 **Repository** | https://github.com/CGIAR-Climate-Data-Hub/cdh-asset-mapping |
 
