@@ -209,7 +209,7 @@ init_notebook_mode(all_interactive=True)
 ```
 :::
 
-**Version 1.0 (draft)** — `{python} stats["total"]` assets in this build. **Interactive data access:** [CDH interactive dashboard](docs/index.html).
+**Version 1.0.1 (draft)** — `{python} stats["total"]` assets in this build. **Interactive data access:** [CDH interactive dashboard](docs/index.html).
 
 > Generated programmatically from the data — no numbers are hand-typed. The figures and tables
 > below are interactive (hover, sort, filter) in this HTML edition. See **Data Access, Feedback

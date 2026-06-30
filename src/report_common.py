@@ -304,9 +304,10 @@ def build_report_body(assets, s, figures_prefix="figures"):
         f"friction (Section 6.5)."
     )
     W(
-        f"- **The strategic shortlist is already defined by the centres.** The "
+        f"- **The centres' nominations provide a strong starting point.** The "
         f"{len(s['strategic'])} top-three nominations come with written justifications and are the "
-        f"natural candidates for immediate Hub inclusion (Section 6.2)."
+        f"primary starting set for immediate Hub consideration, but not the only assets that may "
+        f"enter Phase 1 review (Section 6.2; Section 8)."
     )
     W(
         f"- **The gaps are specific and actionable.** Adaptive Capacity is essentially absent, "
@@ -318,6 +319,8 @@ def build_report_body(assets, s, figures_prefix="figures"):
         f"The rest of the report makes each of these concrete: where the strengths and gaps sit "
         f"(Section 5), and exactly what to do now and next (Section 6)."
     )
+    W(f"")
+    W(f"> **Work-in-progress caveat.** This report is one piece of evidence to guide the Climate Data Hub, alongside other technical, strategic, and governance inputs; it does **not** by itself dictate exactly what the Hub will do. The mapping is iterative and will be updated as centres review their entries, flag corrections, and suggest additions. Centres and partners will have multiple opportunities across the annual CDH cycle to engage, refine priorities, and shape what comes next.")
     W(f"")
 
     W(f"---")
@@ -1155,11 +1158,13 @@ def build_report_body(assets, s, figures_prefix="figures"):
         f"scale, and anchored by a core of foundational, multi-programme, nationally-relevant "
         f"datasets** — but **thin on adaptive capacity, in Latin America and Asia, and dependent "
         f"on single centres in several domains**. For the Hub, the immediate move is clear: act on "
-        f"the {len(s['ingest_now'])} open, ready, high-value assets and the centres' "
-        f"{len(s['strategic'])} strategic nominations now; open access conversations for the "
-        f"high-value-but-restricted assets in parallel; preprocess shared climate inputs once; and "
-        f"bring CIMMYT and ICARDA into the next cycle to close the most visible gaps. The detail "
-        f"sits in Sections 5 and 6; this is the throughline."
+        f"the {len(s['ingest_now'])} open, ready, high-value assets now; use the centres' "
+        f"{len(s['strategic'])} strategic nominations as the primary starting set rather than the "
+        f"only filter; open access conversations for the high-value-but-restricted assets in "
+        f"parallel; preprocess shared climate inputs once; and run a targeted next-round outreach "
+        f"to close visible gaps, especially where current submissions likely under-represent "
+        f"important domains such as adaptive capacity. The detail sits in Sections 5 and 6; this "
+        f"is the throughline."
     )
     W(f"")
 
@@ -1168,10 +1173,11 @@ def build_report_body(assets, s, figures_prefix="figures"):
     W(f"## 8. Next Steps")
     W(f"")
     W(f"1. **Complete outstanding submissions** — follow up with ICARDA and centres with incomplete assessment fields.")
-    W(f"2. **Prioritise assets for Hub integration** — use asset rank and Hub role to sequence technical work.")
-    W(f"3. **Agree federation vs ingestion for each priority asset** — work with data owners to determine appropriate integration pathway.")
-    W(f"4. **Publish asset catalogue** — make inventory available to CGIAR partners via CDH portal.")
-    W(f"5. **Iterate mapping annually** — re-run pipeline as new submissions arrive.")
+    W(f"2. **Run targeted gap-filling outreach** — use the Q2 workshop and other CGIAR channels to identify strong but currently under-represented assets in missing domains or geographies, especially adaptive-capacity assets and gaps in Latin America and Asia.")
+    W(f"3. **Prioritise assets for Hub integration** — use centre rank and Hub role to sequence technical work, but do not limit Phase 1 consideration strictly to the current top-three nominations where wider strategic value or obvious submission gaps suggest additional assets should be reviewed.")
+    W(f"4. **Agree federation vs ingestion for each priority asset** — work with data owners to determine appropriate integration pathway.")
+    W(f"5. **Publish asset catalogue** — make inventory available to CGIAR partners via CDH portal.")
+    W(f"6. **Iterate mapping annually** — re-run pipeline as new submissions arrive.")
     W(f"")
 
     W(f"---")
@@ -1209,7 +1215,7 @@ def build_report_body(assets, s, figures_prefix="figures"):
 
     W(f"---")
     W(f"")
-    W(f"## Data Access, Feedback and Reproducibility")
+    W(f"## Data Access and Reproducibility")
     W(f"")
     W(
         f"This report is generated programmatically: every figure, table, and statistic is "
@@ -1240,6 +1246,11 @@ def build_report_body(assets, s, figures_prefix="figures"):
     W(f"python src/figures.py       # static figures -> outputs/figures/")
     W(f"quarto render report.qmd --to html   # or: --to docx")
     W(f"```")
+    W(f"")
+
+    W(f"---")
+    W(f"")
+    W(f"## Feedback and Review")
     W(f"")
     W(f"### Feedback — corrections, additions, and questions")
     W(f"")
@@ -1274,6 +1285,31 @@ def build_report_body(assets, s, figures_prefix="figures"):
         + _issue("[feedback] <topic>", "Section:\nComment or question:\n", "feedback")
         + ")."
     )
+    W(f"")
+    W(f"::: {{.callout-note appearance=\"simple\"}}")
+    W(f"### Current review feedback themes")
+    W(f"")
+    W(
+        f"*Last updated: {REVIEW_FEEDBACK_UPDATED}.* This internal-review note summarises the "
+        f"current open feedback themes logged in GitHub. It is included for transparency and may "
+        f"change as comments are resolved; it is **not** part of the asset statistics above. Some "
+        f"points from this feedback have already been incorporated into Section 8 (Next Steps)."
+    )
+    W(f"")
+    W(f"- **Implemented in the revised recommendations** — targeted gap-filling outreach and a broader prioritisation approach that does not treat current top-three nominations as the only candidates for Phase 1 review ([#5]({REVIEW_FEEDBACK_ISSUES[1][1]}), [#6]({REVIEW_FEEDBACK_ISSUES[0][1]})).")
+    W(f"- **Still open for discussion** — complement this catalogue of assets produced with evidence on which climate datasets, boundaries, and crop or land-use maps people actually use across CGIAR ([#4]({REVIEW_FEEDBACK_ISSUES[2][1]})).")
+    W(f"- **Still open for discussion** — clarify governance for inclusion decisions, consider whether restricted-access assets should receive lower near-term priority, and distinguish underlying datasets from tools or catalogues ([#1]({REVIEW_FEEDBACK_ISSUES[3][1]})).")
+    W(f"")
+    W(
+        f"Interested readers can view the live GitHub discussion: "
+        f"[all open feedback issues]({REVIEW_FEEDBACK_LIST_URL}) or "
+        + ", ".join(
+            f"[#{num}]({url})"
+            for num, url in REVIEW_FEEDBACK_ISSUES
+        )
+        + "."
+    )
+    W(f":::")
     W(f"")
 
     W(f"---")
@@ -1339,6 +1375,16 @@ REPO_URL = "https://github.com/CGIAR-Climate-Data-Hub/cdh-asset-mapping"
 # Set this to the published Microsoft Form URL once created (see FEEDBACK.md).
 # When empty, the report falls back to the GitHub issue links only.
 FEEDBACK_FORM_URL = "https://forms.office.com/e/ggzDBUqymB"
+REVIEW_FEEDBACK_UPDATED = "30 June 2026"
+REVIEW_FEEDBACK_LIST_URL = (
+    f"{REPO_URL}/issues?q=is%3Aissue+is%3Aopen+label%3Afeedback"
+)
+REVIEW_FEEDBACK_ISSUES = [
+    (6, f"{REPO_URL}/issues/6"),
+    (5, f"{REPO_URL}/issues/5"),
+    (4, f"{REPO_URL}/issues/4"),
+    (1, f"{REPO_URL}/issues/1"),
+]
 
 
 def _linkify_crossrefs(lines):
@@ -1382,7 +1428,7 @@ def build_markdown_report(assets, s, figures_prefix="figures"):
     lines = [
         "# CGIAR Climate Data Hub — System-Wide Climate Data Asset Mapping",
         "",
-        "**Version:** 1.0-draft  ",
+        "**Version:** 1.0.1-draft  ",
         f"**Date:** {s['today']}  ",
         "**Status:** Internal review draft",
         "",
