@@ -640,8 +640,8 @@ def build_report_body(assets, s, figures_prefix="figures"):
     W(
         f"A further interpretation caveat is that current centre profiles may reflect how assets "
         f"were surfaced, not only the full thematic breadth held within each centre. In "
-        f"particular, IFPRI's current submission sits entirely in **Exposure** and ILRI's entirely "
-        f"in **Hazard**, so targeted next-round outreach would help test whether those centre-level "
+        f"particular, IFPRI's current submission sits entirely in Exposure and ILRI's entirely "
+        f"in Hazard, so targeted next-round outreach would help test whether those centre-level "
         f"profiles are complete or mainly reflect the first-round submission pathway."
     )
     W(f"")
