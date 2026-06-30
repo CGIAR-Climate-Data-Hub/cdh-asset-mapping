@@ -91,7 +91,13 @@ import plotly.graph_objects as go
 from itables import init_notebook_mode, show
 
 sys.path.insert(0, str(pathlib.Path.cwd() / "src"))
-from report_common import build_report_body, compute_stats, display_nominator, load
+from report_common import (
+    build_report_body,
+    compute_stats,
+    display_nominator,
+    figure1_centre_label,
+    load,
+)
 
 assets, merge_log = load()
 stats = compute_stats(assets, merge_log)
@@ -250,19 +256,20 @@ for a in assets:
 centres = sorted(totals, key=totals.get)
 f1 = go.Figure()
 for c in centres:
+    label = figure1_centre_label(c)
     base = 0
     for i, (nm, cnt) in enumerate(sorted(by_centre[c].items(), key=lambda x: -x[1])):
-        f1.add_bar(y=[c.replace("_", "-")], x=[cnt], base=base, orientation="h",
+        f1.add_bar(y=[label], x=[cnt], base=base, orientation="h",
                    width=0.7, marker_color=SEG_PALETTE[i % len(SEG_PALETTE)],
                    showlegend=False,
                    hovertemplate=f"<b>{nm}</b>: {cnt} asset(s)<extra></extra>")
         base += cnt
-    f1.add_annotation(x=base, y=c.replace("_", "-"), text=str(base), showarrow=False,
+    f1.add_annotation(x=base, y=label, text=str(base), showarrow=False,
                       xshift=11, font=dict(size=11, color=INK))
 style(f1, barmode="overlay",
       xaxis=dict(title="Number of assets (bar split by nominator)"),
       yaxis=dict(categoryorder="array",
-                 categoryarray=[c.replace("_", "-") for c in centres]))
+                 categoryarray=[figure1_centre_label(c) for c in centres]))
 f1
 ```
 :::

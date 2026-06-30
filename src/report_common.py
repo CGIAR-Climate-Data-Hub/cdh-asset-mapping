@@ -34,6 +34,7 @@ ACKNOWLEDGMENT_COORDINATORS = {
     "IRRI": {"Emma Quicho-Diangkinay"},
     "IWMI": {"Giriraj Amarnath"},
 }
+FIG1_REVIEW_FLAG_CENTRES = {"IRRI", "WorldFish"}
 
 
 def pct(n, total):
@@ -55,6 +56,13 @@ def format_ack_contributor(centre, name):
     if name in ACKNOWLEDGMENT_COORDINATORS.get(centre, set()):
         return f"**{name}**"
     return name
+
+
+def figure1_centre_label(centre):
+    label = centre_label(centre)
+    if centre in FIG1_REVIEW_FLAG_CENTRES:
+        return f"{label}*"
+    return label
 
 
 def load():
@@ -553,9 +561,11 @@ def build_report_body(assets, s, figures_prefix="figures"):
         f"consolidation (Section 2.3), ordered largest to smallest. Each bar is split into one "
         f"coloured segment per nominating individual — a longer run of colours means more "
         f"contributors behind a centre's portfolio (e.g. AfricaRice and IITA drew on many "
-        f"nominators, while ILRI, IFPRI, and IRRI came through a single nominator). Segment colour "
+        f"nominators, while ILRI and IFPRI came through a single nominator). Segment colour "
         f"is arbitrary and carries no meaning (hence no legend); the number is the centre total. "
-        f"The interactive dashboard names each nominator and their count on hover."
+        f"Centres marked with an asterisk indicate cases where a single listed nominator may "
+        f"understate broader internal consultation or contribution. The interactive dashboard names "
+        f"each nominator and their count on hover."
     )
     W(f"")
     W(f"| Centre | Assets | Hub-funded |")
@@ -625,6 +635,14 @@ def build_report_body(assets, s, figures_prefix="figures"):
         f"Heatmap shows number of assets per centre per domain. Hybrid domain labels "
         f"(e.g. Sensitivity / Adaptation Analytics, Adaptation Analytics / Mitigation) are "
         f"excluded from heatmap for readability; they are included in Figure 2."
+    )
+    W(f"")
+    W(
+        f"A further interpretation caveat is that current centre profiles may reflect how assets "
+        f"were surfaced, not only the full thematic breadth held within each centre. In "
+        f"particular, IFPRI's current submission sits entirely in **Exposure** and ILRI's entirely "
+        f"in **Hazard**, so targeted next-round outreach would help test whether those centre-level "
+        f"profiles are complete or mainly reflect the first-round submission pathway."
     )
     W(f"")
 
@@ -1205,7 +1223,7 @@ def build_report_body(assets, s, figures_prefix="figures"):
     W(f"## 8. Next Steps")
     W(f"")
     W(f"1. **Complete outstanding submissions** — follow up with ICARDA and centres with incomplete assessment fields.")
-    W(f"2. **Run targeted gap-filling outreach** — use the Q2 workshop and other CGIAR channels to identify strong but currently under-represented assets in missing domains or geographies, especially adaptive-capacity assets and gaps in Latin America and Asia.")
+    W(f"2. **Run targeted gap-filling outreach** — use the Q2 workshop and other CGIAR channels to identify strong but currently under-represented assets in missing domains or geographies, especially adaptive-capacity assets and gaps in Latin America and Asia. A next round of outreach with ILRI and IFPRI could also usefully broaden thematic coverage, helping ensure that the current submissions are complemented by a wider range of climate-relevant assets from across each centre.")
     W(f"3. **Prioritise assets for Hub integration** — use centre rank and Hub role to sequence technical work, but do not limit Phase 1 consideration strictly to the current top-three nominations where wider strategic value or obvious submission gaps suggest additional assets should be reviewed.")
     W(f"4. **Agree federation vs ingestion for each priority asset** — work with data owners to determine appropriate integration pathway.")
     W(f"5. **Publish asset catalogue** — make inventory available to CGIAR partners via CDH portal.")

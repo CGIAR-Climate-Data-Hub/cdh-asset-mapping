@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import numpy as np
 
-from report_common import display_nominator
+from report_common import display_nominator, figure1_centre_label
 
 ROOT        = Path(__file__).parent.parent
 ASSETS_PATH = ROOT / "data" / "normalized" / "assets.json"
@@ -149,7 +149,7 @@ def fig1_assets_per_centre(assets):
                 va="center", fontsize=9, color="#333333")
 
     ax.set_yticks(range(len(centres)))
-    ax.set_yticklabels(centres, fontsize=9)
+    ax.set_yticklabels([figure1_centre_label(c) for c in centres], fontsize=9)
     ax.set_xlabel("Number of assets (bar split by nominator)", fontsize=10)
     ax.set_xlim(0, max(totals.values()) * 1.15)
     ax.tick_params(axis="x", labelsize=9)
