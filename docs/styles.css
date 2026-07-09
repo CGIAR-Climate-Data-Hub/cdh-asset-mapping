@@ -383,3 +383,17 @@ tbody tr:hover { background: var(--blue-soft); }
   .viewnav .viewtab-sub { display: none; }
   .view-grid, .span-2, .span-3 { grid-template-columns: 1fr; grid-column: auto; }
 }
+/* Phone width: the top bar wraps onto two rows — brand + actions above, the
+   four menus as a full-width equal grid below — so nothing runs off the
+   screen (issue #15). Sticky offsets assume the fixed bar height, so the KPI
+   strip goes static here. */
+@media (max-width: 700px) {
+  .topbar { height: auto; flex-wrap: wrap; gap: .45rem .9rem; padding: .55rem .9rem .65rem; }
+  .brand { min-width: 0; flex: 1; }
+  .brand h1 { font-size: 1rem; }
+  .topbar-actions { gap: .5rem; }
+  .viewnav { flex-basis: 100%; display: grid; grid-template-columns: repeat(4, 1fr); gap: .3rem; }
+  .viewtab { padding: .4rem .2rem; text-align: center; align-items: center; }
+  .viewtab-title { font-size: .82rem; }
+  .kpi-strip { position: static; }
+}

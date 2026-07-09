@@ -80,11 +80,32 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   buildRail();
   wireChrome();
-  switchView(state.view);
+  // Seed the history entry so Back from the first in-app step returns here,
+  // then push a separate entry if the URL asks for an open drawer — Back then
+  // closes the drawer instead of leaving the dashboard (issue #7).
+  history.replaceState({ view: state.view }, "", `#${state.view}`);
+  switchView(state.view, false);
   applyFilters();
   const d = new URLSearchParams(location.search).get("asset");
   if (d != null && state.assets[+d]) openDrawer(state.assets[+d]);
 });
+
+/* View switches and the asset drawer are real navigation steps: each pushes a
+   history entry, and Back walks them in reverse instead of leaving the
+   dashboard (issue #7). popstate re-applies the state without pushing. */
+window.addEventListener("popstate", (e) => {
+  const st = e.state || urlState();
+  if (st.asset != null && state.assets[st.asset]) openDrawer(state.assets[st.asset], false);
+  else closeDrawer(true);
+  const view = VIEWS.includes(st.view) ? st.view : "overview";
+  if (view !== state.view) switchView(view, false);
+});
+
+function urlState() {
+  const view = (location.hash || "").replace("#", "");
+  const asset = new URLSearchParams(location.search).get("asset");
+  return { view, asset: asset != null ? +asset : null };
+}
 
 function deriveAsset(a) {
   const c = { ...a };
@@ -213,8 +234,8 @@ function wireChrome() {
     });
   });
   window.addEventListener("resize", debounce(() => { if (state.view === "flows") renderFlows(); }, 250));
-  $("drawerClose").addEventListener("click", closeDrawer);
-  $("drawerBackdrop").addEventListener("click", closeDrawer);
+  $("drawerClose").addEventListener("click", () => closeDrawer());
+  $("drawerBackdrop").addEventListener("click", () => closeDrawer());
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
 }
 
@@ -223,9 +244,9 @@ function setActNowBtn() {
   b.setAttribute("aria-pressed", String(state.actNowOnly));
 }
 
-function switchView(view) {
+function switchView(view, push = true) {
+  if (push && view !== state.view) history.pushState({ view }, "", `#${view}`);
   state.view = view;
-  if (location.hash !== `#${view}`) history.replaceState(null, "", `#${view}`);
   $("viewNav").querySelectorAll(".viewtab").forEach((t) => {
     const on = t.dataset.view === view;
     t.classList.toggle("is-active", on);
@@ -1025,7 +1046,7 @@ function renderTable() {
 }
 
 /* ================= DRAWER ================= */
-function openDrawer(a) {
+function openDrawer(a, push = true) {
   if (!a) return;
   const comp = [
     ["Decision relevance", a.sc.decision_relevance, a.decision_relevance_norm],
@@ -1077,8 +1098,16 @@ function openDrawer(a) {
   $("drawer").classList.add("is-open");
   $("drawer").setAttribute("aria-hidden", "false");
   $("drawerBackdrop").hidden = false;
+  if (push) {
+    const i = state.assets.indexOf(a);
+    history.pushState({ view: state.view, asset: i }, "", `?asset=${i}#${state.view}`);
+  }
 }
-function closeDrawer() {
+function closeDrawer(viaHistory = false) {
+  if (!$("drawer").classList.contains("is-open")) return;
+  // Opened via a pushed history entry: step back and let popstate close it,
+  // so ✕ / Escape / backdrop and the browser Back button stay in sync (#7).
+  if (!viaHistory && history.state && history.state.asset != null) { history.back(); return; }
   $("drawer").classList.remove("is-open");
   $("drawer").setAttribute("aria-hidden", "true");
   $("drawerBackdrop").hidden = true;
