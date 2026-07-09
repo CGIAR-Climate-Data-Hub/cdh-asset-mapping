@@ -70,6 +70,16 @@ format:
   docx:
     toc: true
     number-sections: false
+comments:
+  giscus:
+    repo: CGIAR-Climate-Data-Hub/cdh-asset-mapping
+    repo-id: R_kgDOS7971A
+    category: Announcements
+    category-id: DIC_kwDOS7971M4DA0y7
+    mapping: pathname
+    reactions-enabled: true
+    loading: lazy
+    input-position: top
 execute:
   echo: false
   warning: false

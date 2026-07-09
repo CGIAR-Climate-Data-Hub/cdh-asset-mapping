@@ -159,3 +159,27 @@ because it is real-time, codeless, and already part of the M365 tenant.
 
 GitHub-comfortable contributors can still open a pre-filled issue directly via
 the links in the report's Feedback section.
+
+## Page comments (giscus)
+
+The HTML report and the dashboard both embed a [giscus](https://giscus.app)
+comment thread backed by this repo's GitHub Discussions (category:
+**Announcements**), for quick remarks that don't warrant a full issue.
+Requires a GitHub login — it complements the form, it does not replace it.
+
+Setup state: Discussions are enabled and both pages are wired
+(`comments: giscus:` in `report.qmd`; script embed in `docs/index.html`).
+One manual step remains: a repo admin must install the giscus app at
+<https://github.com/apps/giscus> and grant it this repository — until then
+the widget shows an error instead of the thread.
+
+## Review participation tracking
+
+Who reviewed the work, when, and through which channel is logged in
+`data/review_log.json` — one entry per review event, covering every channel
+(form, GitHub issue, giscus, email, document). The report renders this as the
+**Review participation** table in its Feedback and Review section; totals are
+computed from the file, never hand-typed.
+
+When feedback arrives outside GitHub (e.g. an emailed document), file its
+items as issues, then add an entry to the log citing those issue numbers.

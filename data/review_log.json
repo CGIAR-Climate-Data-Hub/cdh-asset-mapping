@@ -1,0 +1,45 @@
+{
+  "description": "Audit log of review events for the CDH asset-mapping report and dashboard. One entry per review event. Rendered as the 'Review participation' table in the report — keep this file updated when feedback arrives through any channel (form, GitHub, email, document).",
+  "reviews": [
+    {
+      "date": "2026-06-17",
+      "reviewers": ["Brayden Youngberg"],
+      "github": ["bjyberg"],
+      "affiliation": "Alliance of Bioversity International and CIAT",
+      "channel": "GitHub issue",
+      "scope": "Report",
+      "issues": [1],
+      "summary": "Initial thoughts and next steps"
+    },
+    {
+      "date": "2026-06-18",
+      "reviewers": ["Brayden Youngberg"],
+      "github": ["bjyberg"],
+      "affiliation": "Alliance of Bioversity International and CIAT",
+      "channel": "GitHub issue",
+      "scope": "Report",
+      "issues": [4],
+      "summary": "Assets produced vs assets used"
+    },
+    {
+      "date": "2026-06-29",
+      "reviewers": ["Michelle Tigchelaar"],
+      "github": ["mtigchelaar"],
+      "affiliation": "Stanford University",
+      "channel": "GitHub issue",
+      "scope": "Report",
+      "issues": [5, 6],
+      "summary": "Asset mapping next steps; strategic nominations"
+    },
+    {
+      "date": "2026-07-08",
+      "reviewers": ["Alcade Segnon", "Franck Tonle", "Robert Zougmore"],
+      "github": [],
+      "affiliation": "Alliance of Bioversity International and CIAT",
+      "channel": "Email + PDF document",
+      "scope": "Dashboard",
+      "issues": [7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+      "summary": "Systematic dashboard review (contribution to CC2): 10 issues covering navigation, filter state, coverage-map totals, data completeness, responsiveness, and accessibility"
+    }
+  ]
+}

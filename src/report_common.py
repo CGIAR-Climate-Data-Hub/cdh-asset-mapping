@@ -13,6 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).parent.parent
 ASSETS_PATH = ROOT / "data" / "normalized" / "assets.json"
 MERGE_LOG = ROOT / "data" / "merge_log.json"
+REVIEW_LOG_PATH = ROOT / "data" / "review_log.json"
 
 HUB_FUNDED = {"Alliance", "IITA", "ILRI", "IFPRI", "IWMI", "WorldFish"}
 NOMINATOR_DISPLAY_OVERRIDES = {
@@ -71,6 +72,19 @@ def load():
     with open(MERGE_LOG) as f:
         ml = json.load(f)
     return assets, ml
+
+
+def load_review_log():
+    """Review events (who reviewed what, when, via which channel).
+
+    Maintained by hand in data/review_log.json — feedback arrives through
+    channels the pipeline cannot observe (email, documents), so this file is
+    the single audit trail across all of them.
+    """
+    if not REVIEW_LOG_PATH.exists():
+        return []
+    with open(REVIEW_LOG_PATH) as f:
+        return json.load(f).get("reviews", [])
 
 
 def compute_stats(assets, ml):
@@ -1351,6 +1365,42 @@ def build_report_body(assets, s, figures_prefix="figures"):
         + ")."
     )
     W(f"")
+    W(
+        f"The HTML edition of this report also carries a comment thread at the bottom of "
+        f"the page (GitHub login required), backed by the repository's GitHub Discussions — "
+        f"handy for quick remarks that don't warrant a full issue. The same thread is "
+        f"embedded in the interactive dashboard."
+    )
+    W(f"")
+
+    reviews = load_review_log()
+    if reviews:
+        W(f"### Review participation")
+        W(f"")
+        n_events = len(reviews)
+        n_reviewers = len({name for r in reviews for name in r.get("reviewers", [])})
+        n_items = sum(len(r.get("issues", [])) for r in reviews)
+        W(
+            f"Review of this work is tracked as part of programme participation. To date: "
+            f"**{n_reviewers} reviewers** across **{n_events} review events**, generating "
+            f"**{n_items} tracked feedback items**. The log is maintained in "
+            f"`data/review_log.json` and covers all channels (feedback form, GitHub, email, "
+            f"documents)."
+        )
+        W(f"")
+        W(f"| Date | Reviewer(s) | Affiliation | Channel | Scope | Feedback items |")
+        W(f"|---|---|---|---|---|---|")
+        for r in sorted(reviews, key=lambda r: r["date"]):
+            names = ", ".join(r.get("reviewers", []))
+            links = ", ".join(
+                f"[#{n}]({REPO_URL}/issues/{n})" for n in r.get("issues", [])
+            ) or "—"
+            W(
+                f"| {r['date']} | {names} | {r.get('affiliation', '—')} "
+                f"| {r.get('channel', '—')} | {r.get('scope', '—')} | {links} |"
+            )
+        W(f"")
+
     W(f"::: {{.callout-note appearance=\"simple\"}}")
     W(f"### Current review feedback themes")
     W(f"")
