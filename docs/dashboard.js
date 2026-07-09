@@ -232,12 +232,10 @@ function switchView(view) {
     on ? t.setAttribute("aria-current", "page") : t.removeAttribute("aria-current");
   });
   document.querySelectorAll(".view").forEach((v) => v.classList.toggle("is-active", v.dataset.view === view));
-  // Overview is the whole-portfolio snapshot — filters don't apply there, so
-  // hide the rail to remove the "controls that do nothing" confusion. Every
-  // other view is filter-driven, so the rail is shown.
-  document.querySelector(".layout").classList.toggle("rail-hidden", view === "overview");
   if (view !== "flows" && state.netSim) { state.netSim.stop(); state.netSim = null; }
-  renderView();
+  // Full re-render: KPIs and active-filter chips must follow the view switch,
+  // never show numbers left over from the previous view (issues #8, #9).
+  renderAll();
 }
 
 /* ---------------- render orchestration ---------------- */
@@ -250,14 +248,23 @@ function renderView() {
   else renderExplore();
 }
 
+function hasActiveFilters() {
+  return state.search !== "" || state.actNowOnly
+    || FILTER_DIMS.some(({ field }) => state.filters[field].size > 0);
+}
+
+// "22 of 26 assets drawn — 4 lack a <what> score." (issue #11)
+function omissionNote(drawn, total, what) {
+  if (drawn >= total) return `All ${total} assets in view drawn.`;
+  return `${drawn} of ${total} assets drawn — ${total - drawn} lack a ${what} score.`;
+}
+
 function renderKpis() {
-  // Overview is the whole-portfolio strategic map; Action/Explore are the
-  // filtered working set — KPIs follow suit so the numbers never contradict
-  // the view the user is looking at.
-  const overview = state.view === "overview";
-  const f = overview ? state.assets : state.filtered;
+  // One shared filter state drives every view, KPIs included — the headline
+  // numbers must never contradict the charts below them (issues #8, #9).
+  const f = state.filtered;
   $("kpiAssets").textContent = f.length;
-  $("kpiAssetsFoot").textContent = overview ? "whole portfolio" : `of ${state.assets.length} total`;
+  $("kpiAssetsFoot").textContent = hasActiveFilters() ? `of ${state.assets.length} total` : "whole portfolio";
   $("kpiCentres").textContent = new Set(f.map((a) => a.centre)).size;
   const open = f.filter((a) => a.access_norm === "Open").length;
   $("kpiOpen").textContent = f.length ? `${Math.round(open / f.length * 100)}%` : "—";
@@ -289,9 +296,9 @@ function renderActiveFilters() {
 }
 
 /* ================= OVERVIEW =================
-   Overview is the stable strategic map: it always reflects the WHOLE
-   portfolio and never collapses under rail filters. Clicking any element
-   drills through to Explore with that filter applied. */
+   Overview reflects the same shared filter state as every other view — with
+   no filters it is the whole-portfolio strategic map. Clicking any element
+   drills through to Explore with that selection as the only filter. */
 function renderOverview() {
   renderGapMatrix();
   renderInsights();
@@ -311,20 +318,27 @@ function drillTo(pairs) {
 }
 
 function renderGapMatrix() {
+  const f = state.filtered;
+  // Canonical rows/columns first, then any other value present in the data
+  // (hybrid domains, "Not specified") appended — every asset in view is
+  // counted somewhere, so the cells always sum to the headline (issue #10).
+  const rowDoms = [...DOMAINS,
+    ...[...new Set(f.map((a) => a.domain_norm))].filter((d) => !DOMAINS.includes(d)).sort()];
+  const colGeos = [...GEOS,
+    ...[...new Set(f.map((a) => a.geo_norm))].filter((g) => !GEOS.includes(g)).sort()];
   const grid = {};
   let max = 1;
-  state.assets.forEach((a) => {
-    if (!DOMAINS.includes(a.domain_norm) || !GEOS.includes(a.geo_norm)) return;
+  f.forEach((a) => {
     const k = `${a.domain_norm}|||${a.geo_norm}`;
     grid[k] = (grid[k] || 0) + 1;
     max = Math.max(max, grid[k]);
   });
 
-  const head = `<div class="gap-row" style="--cols:${GEOS.length}">
+  const head = `<div class="gap-row" style="--cols:${colGeos.length}">
       <div class="gap-corner"></div>
-      ${GEOS.map((g) => `<div class="gap-colhead">${esc(g)}</div>`).join("")}</div>`;
-  const rows = DOMAINS.map((d) => {
-    const cells = GEOS.map((g) => {
+      ${colGeos.map((g) => `<div class="gap-colhead">${esc(g)}</div>`).join("")}</div>`;
+  const rows = rowDoms.map((d) => {
+    const cells = colGeos.map((g) => {
       const k = `${d}|||${g}`;
       const v = grid[k] || 0;
       const t = v / max;
@@ -332,7 +346,7 @@ function renderGapMatrix() {
       const cls = `gap-cell${v === 0 ? " is-zero" : ""}`;
       return `<div class="${cls}" style="${bg}" data-d="${esc(d)}" data-g="${esc(g)}" title="${esc(d)} × ${esc(g)}: ${v} — click to open in Explore">${v || ""}</div>`;
     }).join("");
-    return `<div class="gap-row" style="--cols:${GEOS.length}"><div class="gap-rowhead">${esc(d)}</div>${cells}</div>`;
+    return `<div class="gap-row" style="--cols:${colGeos.length}"><div class="gap-rowhead">${esc(d)}</div>${cells}</div>`;
   }).join("");
 
   $("gapMatrix").innerHTML = head + rows;
@@ -350,18 +364,26 @@ function renderGapMatrix() {
 }
 
 function renderInsights() {
-  const f = state.assets;          // always whole portfolio
+  const f = state.filtered;        // follows the shared filter state
+  if (!f.length) { $("insightList").innerHTML = `<div class="empty">No assets in view.</div>`; return; }
   const out = [];
   const grid = {};
   f.forEach((a) => { const k = `${a.domain_norm} in ${a.geo_norm}`; grid[k] = (grid[k] || 0) + 1; });
   const top = Object.entries(grid).sort((a, b) => b[1] - a[1])[0];
   if (top) out.push(`<div class="insight insight-strong"><span class="ic">💪</span><p>Deepest coverage: <b>${esc(top[0])}</b> with <b>${top[1]}</b> assets.</p></div>`);
 
-  const empties = DOMAINS.filter((d) => !f.some((a) => a.domain_norm === d));
-  if (empties.length) out.push(`<div class="insight insight-gap"><span class="ic">⚠️</span><p>Thematic gap — no assets at all in <b>${empties.map(esc).join(", ")}</b>.</p></div>`);
+  // Gap insights only make sense across the full dimension — suppress them
+  // when that dimension is itself filtered (everything unselected would read
+  // as a "gap").
+  if (!state.filters.domain_norm.size) {
+    const empties = DOMAINS.filter((d) => !f.some((a) => a.domain_norm === d));
+    if (empties.length) out.push(`<div class="insight insight-gap"><span class="ic">⚠️</span><p>Thematic gap — no assets at all in <b>${empties.map(esc).join(", ")}</b>.</p></div>`);
+  }
 
-  const thinGeo = GEOS.map((g) => [g, f.filter((a) => a.geo_norm === g).length]).sort((a, b) => a[1] - b[1])[0];
-  if (thinGeo) out.push(`<div class="insight insight-gap"><span class="ic">🌍</span><p>Thinnest geography: <b>${esc(thinGeo[0])}</b> (${thinGeo[1]} assets).</p></div>`);
+  if (!state.filters.geo_norm.size) {
+    const thinGeo = GEOS.map((g) => [g, f.filter((a) => a.geo_norm === g).length]).sort((a, b) => a[1] - b[1])[0];
+    if (thinGeo) out.push(`<div class="insight insight-gap"><span class="ic">🌍</span><p>Thinnest geography: <b>${esc(thinGeo[0])}</b> (${thinGeo[1]} assets).</p></div>`);
+  }
 
   const dc = {};
   f.forEach((a) => (dc[a.domain_norm] ||= new Set()).add(a.centre));
@@ -391,7 +413,7 @@ const SEG_COLORS = ["#1955A6", "#1F8A70", "#E0A11B", "#63A9FE", "#C2691C",
 
 function renderCentreStrength() {
   const map = {};
-  state.assets.forEach((a) => {
+  state.filtered.forEach((a) => {
     (map[a.centre] ||= { n: 0, sum: 0, k: 0, hub: a.hub_funded, noms: {} });
     const m = map[a.centre];
     m.n++;
@@ -423,17 +445,17 @@ function renderCentreStrength() {
 }
 
 function renderDomainChart() {
-  const entries = Object.entries(countBy(state.assets, "domain_norm")).sort((a, b) => b[1] - a[1]);
+  const entries = Object.entries(countBy(state.filtered, "domain_norm")).sort((a, b) => b[1] - a[1]);
   barChart("domainChart", entries, COL.blue, (label) => drillTo([["domain_norm", label]]));
 }
 
 function renderOwnerChart() {
-  // Stacked horizontal: asset type x access status (whole portfolio).
-  const types = orderValues("type_norm", [...new Set(state.assets.map((a) => a.type_norm))]);
+  // Stacked horizontal: asset type x access status (current view).
+  const types = orderValues("type_norm", [...new Set(state.filtered.map((a) => a.type_norm))]);
   const accesses = ["Open", "Restricted", "Unknown"];
   const datasets = accesses.map((acc) => ({
     label: acc,
-    data: types.map((t) => state.assets.filter((a) => a.type_norm === t && a.access_norm === acc).length),
+    data: types.map((t) => state.filtered.filter((a) => a.type_norm === t && a.access_norm === acc).length),
     backgroundColor: ACCESS_COL[acc],
     borderRadius: 4,
   }));
@@ -524,12 +546,12 @@ function renderQuadrant() {
   if (state.quadMode === "beeswarm") return renderBeeswarm();
 
   const xf = state.quadX, yf = state.quadY, lx = compLabel(xf), ly = compLabel(yf);
-  $("priPlotSub").textContent =
-    `${lx} × ${ly}. Bubble size = decision relevance · colour = access. Click a point for detail.`;
   const pts = { Open: [], Restricted: [], Unknown: [] };
+  let drawn = 0;
   state.filtered.forEach((a) => {
     const x = a.sc[xf], y = a.sc[yf];
     if (x == null || y == null) return;
+    drawn++;
     const r = 4 + (a.sc.decision_relevance ?? 0.5) * 11;
     (pts[a.access_norm] || pts.Unknown).push({
       // deterministic spread (no Math.random so points don't jump on re-render)
@@ -538,6 +560,11 @@ function renderQuadrant() {
       r, asset: a,
     });
   });
+  // Never omit assets silently (issue #11): say how many are drawn and why
+  // the rest are not.
+  $("priPlotSub").textContent =
+    `${lx} × ${ly}. Bubble size = decision relevance · colour = access. Click a point for detail. `
+    + omissionNote(drawn, state.filtered.length, `${lx.toLowerCase()} / ${ly.toLowerCase()}`);
   const datasets = Object.entries(pts).filter(([, v]) => v.length).map(([acc, data]) => ({
     label: acc, data, backgroundColor: hexA(ACCESS_COL[acc], 0.5), borderColor: "#fff", borderWidth: 1,
     hoverBackgroundColor: hexA(ACCESS_COL[acc], 0.95), hoverBorderColor: COL.green, hoverBorderWidth: 2,
@@ -568,8 +595,10 @@ function renderBeeswarm() {
   const xf = state.swarmX, lf = state.swarmLane;
   const xMeta = SWARM_X.find((d) => d.key === xf) || SWARM_X[0];
   const xLabel = xMeta.label, xMax = xMeta.max, binW = xMax > 2 ? 3 : 0.04;
+  const drawn = state.filtered.filter((a) => swarmXVal(a, xf) != null).length;
   $("priPlotSub").textContent =
-    `Every asset as one dot · x = ${xLabel.toLowerCase()} · lane = ${dimLabel(lf).toLowerCase()}. Dots spread so none overlap — click any for detail.`;
+    `Every asset as one dot · x = ${xLabel.toLowerCase()} · lane = ${dimLabel(lf).toLowerCase()}. Dots spread so none overlap — click any for detail. `
+    + omissionNote(drawn, state.filtered.length, xLabel.toLowerCase());
   const lanes = orderValues(lf, [...new Set(state.filtered.map((a) => a[lf] || "Not specified"))]);
   const laneIndex = new Map(lanes.map((v, i) => [v, lanes.length - i]));  // top lane = first
   const datasets = lanes.map((lv) => {

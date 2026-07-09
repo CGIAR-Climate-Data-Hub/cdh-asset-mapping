@@ -756,6 +756,24 @@ def main():
     all_assets = apply_merge_log(all_assets, merge_log)
     print(f"After consolidation: {len(all_assets)}")
 
+    # Display-name corrections (issue #14): typos in submitted names that would
+    # otherwise be shown to users verbatim. Submission Excels are never edited;
+    # the original is kept in name_submitted as the audit trail. Applied after
+    # the merge log, which matches on raw names. Confirm each with the centre.
+    NAME_FIXES = {
+        ("IWMI", "Irrigater Area Map"): "Irrigated Area Map",
+        ("IRRI", "Rice Mitigation Hotspots and Mitigation Pathway Maps "
+                 "(currently being develop)"):
+            "Rice Mitigation Hotspots and Mitigation Pathway Maps "
+            "(currently being developed)",
+    }
+    for a in all_assets:
+        fixed = NAME_FIXES.get((a["centre"], a["name"]))
+        if fixed:
+            a["name_submitted"] = a["name"]
+            a["name"] = fixed
+            print(f"  Name fix ({a['centre']}): {a['name_submitted']!r} -> {fixed!r}")
+
     # ----------------------------------------------------------------------
     # Centre-relative rank: Asset Rank is ranked 1..N *within each centre*,
     # not across the system. Convert to a 0..1 score (rank 1 = best) and a

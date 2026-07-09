@@ -7071,7 +7071,7 @@
   {
     "centre": "IRRI",
     "hub_funded": false,
-    "name": "Rice Mitigation Hotspots and Mitigation Pathway Maps (currently being develop)",
+    "name": "Rice Mitigation Hotspots and Mitigation Pathway Maps (currently being developed)",
     "nominator": "a.urfels@cgiar.org",
     "asset_type": null,
     "short_description": "Using a combination of earth observation and rice modelling data, this product identifies current rice emissions hotspots, their drivers, and priority mitigation pathways across various intervention types.",
@@ -7130,6 +7130,7 @@
       "role": 1.0,
       "rank": null
     },
+    "name_submitted": "Rice Mitigation Hotspots and Mitigation Pathway Maps (currently being develop)",
     "rank_score": null,
     "is_top3_in_centre": false,
     "priority_score": 83
@@ -7404,7 +7405,7 @@
   {
     "centre": "IWMI",
     "hub_funded": true,
-    "name": "Irrigater Area Map",
+    "name": "Irrigated Area Map",
     "nominator": "Giriraj Amarnath",
     "asset_type": "Co-produced (with partners)",
     "short_description": "The data set is developed based on phenological variations in agricultural areas to distinguish between irrigated and rainfed systems. A time-series dataset derived from the MOD13Q1 of MODIS at 250 m spatial resolution is utilized to capture crop growth stages. Advanced signal processing techniques, including Fourier and Wavelet transformations, are applied to analyze Normalized Difference Vegetation Index (NDVI) patterns and effectively map agricultural phenology.",
@@ -7463,6 +7464,7 @@
       "role": null,
       "rank": null
     },
+    "name_submitted": "Irrigater Area Map",
     "rank_score": null,
     "is_top3_in_centre": false,
     "priority_score": 85

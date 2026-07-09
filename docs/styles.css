@@ -320,10 +320,6 @@ tbody tr:hover { background: var(--blue-soft); }
 
 .empty { padding: 2rem; text-align: center; color: var(--muted); font-size: .88rem; }
 
-/* ---------- Rail-hidden (Overview = whole-portfolio snapshot) ---------- */
-.layout.rail-hidden { grid-template-columns: 1fr; }
-.layout.rail-hidden .rail { display: none; }
-
 /* ---------- Segmented toggle (priority plot / flow mode) ---------- */
 .head-tools { display: flex; align-items: center; gap: .9rem; flex-wrap: wrap; }
 .seg-toggle { display: inline-flex; gap: .25rem; background: var(--bg); padding: .25rem; border-radius: 10px; }
