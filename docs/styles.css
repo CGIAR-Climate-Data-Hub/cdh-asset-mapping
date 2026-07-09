@@ -205,6 +205,16 @@ button { font-family: inherit; cursor: pointer; }
 }
 .gap-cell:not(.is-zero):hover { transform: scale(1.04); box-shadow: var(--shadow); cursor: pointer; }
 .gap-cell.is-zero { background: repeating-linear-gradient(45deg, #fff, #fff 5px, #FBEDEA 5px, #FBEDEA 10px); color: var(--restricted); border: 1px dashed #E4B6AB; cursor: default; }
+/* Interactive chart elements are real buttons (keyboard + screen-reader
+   operable, issue #16) — neutralise UA button chrome, keep the chart look. */
+button.gap-cell { font-family: inherit; padding: 0; background: none; }
+button.strength-row, button.pbar { border: 0; background: transparent; font: inherit; text-align: left; width: 100%; }
+button.pbar { padding: 0; }
+.strength-track, .pbar-track, .pbar-fill { display: block; }
+.gap-cell:focus-visible, .strength-row:focus-visible, .pbar:focus-visible,
+.qcard:focus-visible, #assetTable tbody tr:focus-visible {
+  outline: 2px solid var(--blue); outline-offset: 2px;
+}
 .gap-rowhead { height: 46px; }
 
 /* ---------- Insights ---------- */

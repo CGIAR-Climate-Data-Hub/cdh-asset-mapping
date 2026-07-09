@@ -365,7 +365,12 @@ function renderGapMatrix() {
       const t = v / max;
       const bg = v === 0 ? "" : `background:rgba(25,85,166,${0.12 + t * 0.78});color:${t > 0.5 ? "#fff" : COL.green}`;
       const cls = `gap-cell${v === 0 ? " is-zero" : ""}`;
-      return `<div class="${cls}" style="${bg}" data-d="${esc(d)}" data-g="${esc(g)}" title="${esc(d)} × ${esc(g)}: ${v} — click to open in Explore">${v || ""}</div>`;
+      // Real buttons with a full-context label: keyboard-focusable and each
+      // cell readable by assistive tools, not one opaque image (issue #16).
+      const label = v
+        ? `${d} in ${g}: ${v} asset${v === 1 ? "" : "s"} — open in Explore`
+        : `${d} in ${g}: no assets — coverage gap`;
+      return `<button type="button" class="${cls}" ${v ? "" : "disabled"} style="${bg}" data-d="${esc(d)}" data-g="${esc(g)}" aria-label="${esc(label)}" title="${esc(d)} × ${esc(g)}: ${v} — click to open in Explore">${v || ""}</button>`;
     }).join("");
     return `<div class="gap-row" style="--cols:${colGeos.length}"><div class="gap-rowhead">${esc(d)}</div>${cells}</div>`;
   }).join("");
@@ -452,13 +457,14 @@ function renderCentreStrength() {
     const segs = r.segs.map(([nm, cnt], i) =>
       `<span class="strength-seg" style="width:${cnt / r.n * 100}%;background:${SEG_COLORS[i % SEG_COLORS.length]}" title="${esc(nm)}: ${cnt} asset${cnt > 1 ? "s" : ""}"></span>`
     ).join("");
+    const label = `${r.c}: ${r.n} assets, mean priority ${r.mean}${r.hub ? ", hub-funded" : ""} — open in Explore`;
     return `
-    <div class="strength-row" data-centre="${esc(r.c)}">
-      <div class="strength-name">${r.hub ? '<span class="hub-dot" title="Hub-funded"></span>' : ""}${esc(r.c)}</div>
-      <div class="strength-track"><div class="strength-fill" style="width:${Math.max(6, r.n / max * 100)}%">${segs}</div></div>
-      <div class="strength-count">${r.n}</div>
-      <div class="strength-badge" style="background:${scoreColor(r.mean)}" title="Mean priority score">${r.mean}</div>
-    </div>`;
+    <button type="button" class="strength-row" data-centre="${esc(r.c)}" aria-label="${esc(label)}">
+      <span class="strength-name">${r.hub ? '<span class="hub-dot" title="Hub-funded"></span>' : ""}${esc(r.c)}</span>
+      <span class="strength-track"><span class="strength-fill" style="width:${Math.max(6, r.n / max * 100)}%">${segs}</span></span>
+      <span class="strength-count">${r.n}</span>
+      <span class="strength-badge" style="background:${scoreColor(r.mean)}" title="Mean priority score">${r.mean}</span>
+    </button>`;
   }).join("");
 
   $("centreStrength").querySelectorAll(".strength-row").forEach((row) =>
@@ -664,10 +670,11 @@ function renderPathway() {
   const total = state.filtered.length || 1;
   $("pathwayBars").innerHTML = PATHWAY.filter((p) => counts[p.key]).map((p) => {
     const v = counts[p.key];
-    return `<div class="pbar" data-value="${esc(p.key)}">
-      <div class="pbar-top"><span>${esc(p.key)}</span><b>${v} · ${Math.round(v / total * 100)}%</b></div>
-      <div class="pbar-track"><div class="pbar-fill" style="width:${v / total * 100}%;background:${p.col}"></div></div>
-    </div>`;
+    const on = state.filters.integration_hint.has(p.key);
+    return `<button type="button" class="pbar" data-value="${esc(p.key)}" aria-pressed="${on}" aria-label="${esc(p.key)}: ${v} assets (${Math.round(v / total * 100)}%) — toggle filter">
+      <span class="pbar-top"><span>${esc(p.key)}</span><b>${v} · ${Math.round(v / total * 100)}%</b></span>
+      <span class="pbar-track"><span class="pbar-fill" style="width:${v / total * 100}%;background:${p.col}"></span></span>
+    </button>`;
   }).join("") || `<div class="empty">No assets in view.</div>`;
   $("pathwayBars").querySelectorAll(".pbar").forEach((b) =>
     b.addEventListener("click", () => toggleFilter("integration_hint", b.dataset.value)));
@@ -705,7 +712,7 @@ function renderQueue() {
     const blocker = tab === "next" ? (a.access_norm === "Restricted"
       ? `<div class="qcard-blocker">⛔ Restricted access</div>`
       : `<div class="qcard-blocker">⛔ Readiness below High</div>`) : "";
-    return `<article class="qcard" data-label="${esc(a.label)}">
+    return `<article class="qcard" data-label="${esc(a.label)}" tabindex="0">
       <div class="qscore">${a.priority_score ?? "—"}<small>${tab === "strategic" ? "score·aid" : "score"}</small></div>
       <div>
         <h4>${esc(a.name)} ${lead}</h4>
@@ -718,8 +725,12 @@ function renderQueue() {
         </div>${blocker}
       </div></article>`;
   }).join("");
-  host.querySelectorAll(".qcard").forEach((card) =>
-    card.addEventListener("click", () => openDrawer(byLabel(card.dataset.label))));
+  host.querySelectorAll(".qcard").forEach((card) => {
+    card.addEventListener("click", () => openDrawer(byLabel(card.dataset.label)));
+    card.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDrawer(byLabel(card.dataset.label)); }
+    });
+  });
 }
 
 /* ================= FLOWS =================
@@ -1031,7 +1042,7 @@ function renderTable() {
   const tb = $("assetTable").querySelector("tbody");
   if (!rows.length) { tb.innerHTML = `<tr><td colspan="8"><div class="empty">No assets match current filters.</div></td></tr>`; return; }
   tb.innerHTML = rows.map((a) => `
-    <tr data-label="${esc(a.label)}">
+    <tr data-label="${esc(a.label)}" tabindex="0">
       <td class="td-name"><strong>${esc(a.name)}</strong><small>${a.hub_funded ? "Hub-funded" : "Non-hub"}${a.foundational ? " · foundational" : ""}</small></td>
       <td>${esc(a.centre)}</td>
       <td>${esc(a.domain_norm)}</td>
@@ -1041,8 +1052,12 @@ function renderTable() {
       <td><span class="pill ${accClass(a)}">${esc(a.access_norm)}</span></td>
       <td>${esc(a.integration_hint)}</td>
     </tr>`).join("");
-  tb.querySelectorAll("tr[data-label]").forEach((tr) =>
-    tr.addEventListener("click", () => openDrawer(byLabel(tr.dataset.label))));
+  tb.querySelectorAll("tr[data-label]").forEach((tr) => {
+    tr.addEventListener("click", () => openDrawer(byLabel(tr.dataset.label)));
+    tr.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDrawer(byLabel(tr.dataset.label)); }
+    });
+  });
 }
 
 /* ================= DRAWER ================= */
@@ -1098,6 +1113,7 @@ function openDrawer(a, push = true) {
   $("drawer").classList.add("is-open");
   $("drawer").setAttribute("aria-hidden", "false");
   $("drawerBackdrop").hidden = false;
+  $("drawerClose").focus();
   if (push) {
     const i = state.assets.indexOf(a);
     history.pushState({ view: state.view, asset: i }, "", `?asset=${i}#${state.view}`);
