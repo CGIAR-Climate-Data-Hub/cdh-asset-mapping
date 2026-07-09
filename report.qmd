@@ -102,6 +102,7 @@ from itables import init_notebook_mode, show
 
 sys.path.insert(0, str(pathlib.Path.cwd() / "src"))
 from report_common import (
+    REPORT_VERSION,
     build_report_body,
     compute_stats,
     display_nominator,
@@ -239,7 +240,7 @@ init_notebook_mode(all_interactive=True)
 ```
 :::
 
-**Version 1.0.1 (draft)** — `{python} stats["total"]` assets in this build. **Interactive data access:** [CDH interactive dashboard](https://cgiar-climate-data-hub.github.io/cdh-asset-mapping/#overview).
+**Version `{python} REPORT_VERSION`** — `{python} stats["total"]` assets in this build. **Interactive data access:** [CDH interactive dashboard](https://cgiar-climate-data-hub.github.io/cdh-asset-mapping/#overview).
 
 > Generated programmatically from the data — no numbers are hand-typed. The figures and tables
 > below are interactive (hover, sort, filter) in this HTML edition. See **Data Access, Feedback

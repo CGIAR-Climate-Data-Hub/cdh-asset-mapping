@@ -1411,6 +1411,7 @@ def build_report_body(assets, s, figures_prefix="figures"):
         f"points from this feedback have already been incorporated into Section 8 (Next Steps)."
     )
     W(f"")
+    W(f"- **Resolved** — the Alliance team's systematic dashboard review (8 July 2026) logged ten issues covering navigation, filter consistency, coverage-map totals, responsiveness, and accessibility; eight are fixed and closed, and two data-completeness items (missing data links, unconfirmed contact emails) remain open pending centre outreach ([#12]({REPO_URL}/issues/12), [#13]({REPO_URL}/issues/13)).")
     W(f"- **Implemented in the revised recommendations** — targeted gap-filling outreach and a broader prioritisation approach that does not treat current top-three nominations as the only candidates for Phase 1 review ([#5]({REVIEW_FEEDBACK_ISSUES[1][1]}), [#6]({REVIEW_FEEDBACK_ISSUES[0][1]})).")
     W(f"- **Still open for discussion** — complement this catalogue of assets produced with evidence on which climate datasets, boundaries, and crop or land-use maps people actually use across CGIAR ([#4]({REVIEW_FEEDBACK_ISSUES[2][1]})).")
     W(f"- **Still open for discussion** — clarify governance for inclusion decisions, consider whether restricted-access assets should receive lower near-term priority, and distinguish underlying datasets from tools or catalogues ([#1]({REVIEW_FEEDBACK_ISSUES[3][1]})).")
@@ -1486,11 +1487,12 @@ def build_report_body(assets, s, figures_prefix="figures"):
 #   - "Annex C" headings get {#annex-c}
 #   - inline "Section 6.2" / "Annex C" mentions become links to those ids
 # ---------------------------------------------------------------------------
+REPORT_VERSION = "1.1.0-draft"
 REPO_URL = "https://github.com/CGIAR-Climate-Data-Hub/cdh-asset-mapping"
 # Set this to the published Microsoft Form URL once created (see FEEDBACK.md).
 # When empty, the report falls back to the GitHub issue links only.
 FEEDBACK_FORM_URL = "https://forms.office.com/e/ggzDBUqymB"
-REVIEW_FEEDBACK_UPDATED = "30 June 2026"
+REVIEW_FEEDBACK_UPDATED = "9 July 2026"
 REVIEW_FEEDBACK_LIST_URL = (
     f"{REPO_URL}/issues?q=is%3Aissue+is%3Aopen+label%3Afeedback"
 )
@@ -1543,7 +1545,7 @@ def build_markdown_report(assets, s, figures_prefix="figures"):
     lines = [
         "# CGIAR Climate Data Hub — System-Wide Climate Data Asset Mapping",
         "",
-        "**Version:** 1.0.1-draft  ",
+        f"**Version:** {REPORT_VERSION}  ",
         f"**Date:** {s['today']}  ",
         "**Status:** Internal review draft",
         "",
