@@ -101,6 +101,9 @@ button { font-family: inherit; cursor: pointer; }
 .kpi-foot { font-size: .72rem; color: var(--muted); }
 .kpi-accent { background: linear-gradient(180deg, #fff, var(--blue-soft)); }
 .kpi-accent strong { color: var(--blue); }
+button.kpi { border: 0; font: inherit; text-align: left; cursor: pointer; }
+button.kpi:hover { filter: brightness(.985); }
+button.kpi:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
 
 /* ---------- Layout ---------- */
 .layout { display: grid; grid-template-columns: var(--rail-w) 1fr; align-items: start; }

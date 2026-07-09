@@ -201,6 +201,11 @@ function wireChrome() {
   $("actNowToggle").addEventListener("click", () => {
     state.actNowOnly = !state.actNowOnly; setActNowBtn(); applyFilters();
   });
+  // The "Ready to act now" KPI card jumps straight to those assets in Explore.
+  $("kpiActNowCard").addEventListener("click", () => {
+    state.actNowOnly = true; setActNowBtn(); applyFilters();
+    if (state.view !== "explore") switchView("explore");
+  });
   $("downloadCsv").addEventListener("click", downloadCsv);
   $("tableSort").addEventListener("change", (e) => { state.tableSort = e.target.value; renderTable(); });
   document.querySelectorAll("#assetTable th.sortable").forEach((th) => {
