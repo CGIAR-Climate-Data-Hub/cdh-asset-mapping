@@ -57,6 +57,7 @@ const state = {
   swarmX: "priority_score", swarmLane: "access_norm",          // beeswarm axis + lane
   tableSort: "priority_score",
   tableDir: "desc",
+  gapRow: "domain_norm", gapCol: "geo_norm",  // coverage-map axes
   selectedCell: null,        // "domain|||geo"
   charts: {},
   netSim: null,              // active d3-force simulation (so we can stop it)
@@ -115,6 +116,7 @@ function deriveAsset(a) {
   c.access_norm = c.access_norm || "Unknown";
   c.integration_hint = c.integration_hint || "Assess";
   c.hub_role_norm = c.hub_role_norm || "Unspecified";
+  c.national_relevance = c.national_relevance || "Not specified";
   c.priority_score = Number.isFinite(c.priority_score) ? c.priority_score : null;
   c.sc = c.score_components || {};
   c.label = `${c.name} (${c.centre})`;
@@ -343,28 +345,49 @@ function drillTo(pairs) {
   switchView("explore");
 }
 
+// Axis values for the coverage map: canonical order first (so known gaps stay
+// visible), then any other value present in the whole portfolio appended —
+// every asset in view is counted somewhere, so the cells always sum to the
+// headline (issue #10). The universe is state.assets, not the filtered set,
+// so axes stay stable while filtering.
+function gapAxisValues(field) {
+  const present = [...new Set(state.assets.map((a) => a[field] || "Not specified"))];
+  const canon = field === "domain_norm" ? DOMAINS : field === "geo_norm" ? GEOS : null;
+  if (!canon) return orderValues(field, present);
+  return [...canon, ...present.filter((v) => !canon.includes(v)).sort()];
+}
+
 function renderGapMatrix() {
   const f = state.filtered;
-  // Canonical rows/columns first, then any other value present in the data
-  // (hybrid domains, "Not specified") appended — every asset in view is
-  // counted somewhere, so the cells always sum to the headline (issue #10).
-  const rowDoms = [...DOMAINS,
-    ...[...new Set(f.map((a) => a.domain_norm))].filter((d) => !DOMAINS.includes(d)).sort()];
-  const colGeos = [...GEOS,
-    ...[...new Set(f.map((a) => a.geo_norm))].filter((g) => !GEOS.includes(g)).sort()];
+  const rf = state.gapRow, cf = state.gapCol;
+
+  // Row/column variable selectors (any rail dimension; row ≠ column).
+  const dimPairs = FILTER_DIMS.map((d) => [d.field, d.label]);
+  $("gapCtrls").innerHTML =
+    `<span class="fc-label">Rows</span>${priSelect("gapR", rf, dimPairs, [cf])}` +
+    `<span class="fc-label">Columns</span>${priSelect("gapC", cf, dimPairs, [rf])}`;
+  $("gapCtrls").querySelectorAll("select").forEach((s) => s.addEventListener("change", () => {
+    state.gapRow = $("pc_gapR").value;
+    state.gapCol = $("pc_gapC").value;
+    renderGapMatrix();
+  }));
+  $("gapTitle").textContent = `Coverage map — ${dimLabel(rf).toLowerCase()} × ${dimLabel(cf).toLowerCase()}`;
+
+  const rowVals = gapAxisValues(rf);
+  const colVals = gapAxisValues(cf);
   const grid = {};
   let max = 1;
   f.forEach((a) => {
-    const k = `${a.domain_norm}|||${a.geo_norm}`;
+    const k = `${a[rf] || "Not specified"}|||${a[cf] || "Not specified"}`;
     grid[k] = (grid[k] || 0) + 1;
     max = Math.max(max, grid[k]);
   });
 
-  const head = `<div class="gap-row" style="--cols:${colGeos.length}">
+  const head = `<div class="gap-row" style="--cols:${colVals.length}">
       <div class="gap-corner"></div>
-      ${colGeos.map((g) => `<div class="gap-colhead">${esc(g)}</div>`).join("")}</div>`;
-  const rows = rowDoms.map((d) => {
-    const cells = colGeos.map((g) => {
+      ${colVals.map((g) => `<div class="gap-colhead">${esc(g)}</div>`).join("")}</div>`;
+  const rows = rowVals.map((d) => {
+    const cells = colVals.map((g) => {
       const k = `${d}|||${g}`;
       const v = grid[k] || 0;
       const t = v / max;
@@ -373,11 +396,11 @@ function renderGapMatrix() {
       // Real buttons with a full-context label: keyboard-focusable and each
       // cell readable by assistive tools, not one opaque image (issue #16).
       const label = v
-        ? `${d} in ${g}: ${v} asset${v === 1 ? "" : "s"} — open in Explore`
-        : `${d} in ${g}: no assets — coverage gap`;
+        ? `${d} × ${g}: ${v} asset${v === 1 ? "" : "s"} — open in Explore`
+        : `${d} × ${g}: no assets — coverage gap`;
       return `<button type="button" class="${cls}" ${v ? "" : "disabled"} style="${bg}" data-d="${esc(d)}" data-g="${esc(g)}" aria-label="${esc(label)}" title="${esc(d)} × ${esc(g)}: ${v} — click to open in Explore">${v || ""}</button>`;
     }).join("");
-    return `<div class="gap-row" style="--cols:${colGeos.length}"><div class="gap-rowhead">${esc(d)}</div>${cells}</div>`;
+    return `<div class="gap-row" style="--cols:${colVals.length}"><div class="gap-rowhead">${esc(d)}</div>${cells}</div>`;
   }).join("");
 
   $("gapMatrix").innerHTML = head + rows;
@@ -389,7 +412,7 @@ function renderGapMatrix() {
   $("gapMatrix").querySelectorAll(".gap-cell").forEach((cell) => {
     cell.addEventListener("click", () => {
       if (cell.classList.contains("is-zero")) return;   // nothing to open
-      drillTo([["domain_norm", cell.dataset.d], ["geo_norm", cell.dataset.g]]);
+      drillTo([[rf, cell.dataset.d], [cf, cell.dataset.g]]);
     });
   });
 }
