@@ -364,7 +364,9 @@ def build_report_body(assets, s, figures_prefix="figures"):
         f"enter Phase 1 review (Section 6.2; Section 8)."
     )
     W(
-        f"- **The gaps are specific and actionable.** Adaptive Capacity is essentially absent, "
+        f"- **The gaps are specific and actionable.** Adaptive Capacity was absent in the first "
+        f"round and now holds {s['domain_counts'].get('Adaptive Capacity', 0)} assets, all from "
+        f"IFPRI's provisional July 2026 follow-up (unranked pending their combined ranking); "
         f"Latin America & Caribbean and Asia are thin, and two major centres — CIMMYT and "
         f"ICARDA — have yet to submit (Section 5; Section 7)."
     )
@@ -653,10 +655,14 @@ def build_report_body(assets, s, figures_prefix="figures"):
     W(f"")
     W(
         f"A further interpretation caveat is that current centre profiles may reflect how assets "
-        f"were surfaced, not only the full thematic breadth held within each centre. In "
-        f"particular, IFPRI's current submission sits entirely in Exposure and ILRI's entirely "
-        f"in Hazard, so targeted next-round outreach would help test whether those centre-level "
-        f"profiles are complete or mainly reflect the first-round submission pathway."
+        f"were surfaced, not only the full thematic breadth held within each centre. IFPRI's "
+        f"first-round submission sat entirely in Exposure; their July 2026 follow-up added five "
+        f"adaptation-focused assets (one Adaptation Analytics, four Adaptive Capacity — "
+        f"provisional and unranked pending IFPRI's combined ranking, with descriptions drafted "
+        f"from public records and awaiting IFPRI confirmation). ILRI's submission remains "
+        f"entirely in Hazard, so targeted next-round outreach would help test whether that "
+        f"profile is complete or mainly reflects the first-round submission pathway — the IFPRI "
+        f"follow-up shows such outreach works."
     )
     W(f"")
 
@@ -796,8 +802,10 @@ def build_report_body(assets, s, figures_prefix="figures"):
         f"**Figure 6. Where coverage is deep, thin, or absent (climate domain × geography).** Each "
         f"cell counts the assets in one domain (row) and geography (column); darker blue = more "
         f"assets, a red dot = a true gap with none. Hover any cell for the exact count. Two patterns "
-        f"stand out: coverage concentrates heavily in Africa and Global, and **Adaptive Capacity is "
-        f"empty across every region** while **Latin America & Caribbean** and **Multi-regional** are "
+        f"stand out: coverage concentrates heavily in Africa and Global, and **Adaptive Capacity — "
+        f"empty across every region in the first round — holds only "
+        f"{s['domain_counts'].get('Adaptive Capacity', 0)} provisional IFPRI additions**, while "
+        f"**Latin America & Caribbean** and **Multi-regional** are "
         f"thin throughout — the clearest targets for the next cycle. Hybrid-domain and "
         f"unspecified-geography assets are excluded for legibility."
     )
@@ -1115,8 +1123,10 @@ def build_report_body(assets, s, figures_prefix="figures"):
     W(f"")
     W(
         f"Second, within the assets that *were* submitted, three gaps are robust enough to act on. "
-        f"**Adaptive Capacity** is essentially absent ({s['domain_counts'].get('Adaptive Capacity', 0)} "
-        f"assets) — the portfolio is strong on hazard and adaptation analytics but weak on the "
+        f"**Adaptive Capacity** remains the thinnest domain "
+        f"({s['domain_counts'].get('Adaptive Capacity', 0)} assets, all provisional IFPRI "
+        f"follow-up additions pending final ranking) — the portfolio is strong on hazard and "
+        f"adaptation analytics but weak on the "
         f"social and institutional capacity to respond, a recognised blind spot for climate "
         f"targeting. **Latin America & Caribbean** and **Asia / South & SE Asia** are thin relative "
         f"to Africa and Global coverage, concentrating geographic risk. And "
@@ -1237,7 +1247,7 @@ def build_report_body(assets, s, figures_prefix="figures"):
     W(f"## 8. Next Steps")
     W(f"")
     W(f"1. **Complete outstanding submissions** — follow up with ICARDA and centres with incomplete assessment fields.")
-    W(f"2. **Run targeted gap-filling outreach** — use the Q2 workshop and other CGIAR channels to identify strong but currently under-represented assets in missing domains or geographies, especially adaptive-capacity assets and gaps in Latin America and Asia. A next round of outreach with ILRI and IFPRI could also usefully broaden thematic coverage, helping ensure that the current submissions are complemented by a wider range of climate-relevant assets from across each centre.")
+    W(f"2. **Run targeted gap-filling outreach** — use the Q2 workshop and other CGIAR channels to identify strong but currently under-represented assets in missing domains or geographies, especially adaptive-capacity assets and gaps in Latin America and Asia. This is already producing results: IFPRI's July 2026 follow-up added five adaptation-focused assets (provisional, unranked pending their combined ranking). A similar round with ILRI could usefully broaden thematic coverage, helping ensure that the current submissions are complemented by a wider range of climate-relevant assets from across each centre.")
     W(f"3. **Prioritise assets for Hub integration** — use centre rank and Hub role to sequence technical work, but do not limit Phase 1 consideration strictly to the current top-three nominations where wider strategic value or obvious submission gaps suggest additional assets should be reviewed.")
     W(f"4. **Agree federation vs ingestion for each priority asset** — work with data owners to determine appropriate integration pathway.")
     W(f"5. **Publish asset catalogue** — make inventory available to CGIAR partners via CDH portal.")
@@ -1300,6 +1310,16 @@ def build_report_body(assets, s, figures_prefix="figures"):
         f"This report is generated programmatically: every figure, table, and statistic is "
         f"computed from the normalised data, with no hand-typed numbers. The data and the code "
         f"that produces this document are version-controlled and open."
+    )
+    W(f"")
+    W(
+        f"**AI-assisted records.** The five IFPRI assets added in the July 2026 follow-up carry "
+        f"descriptions drafted with AI assistance from their Harvard Dataverse records and "
+        f"related publications; each is marked *[AI-drafted from the Harvard Dataverse record "
+        f"and related publications - pending IFPRI review]* in the asset record (visible in "
+        f"Annex A and the dashboard) until IFPRI confirms the wording. Their use and importance "
+        f"fields were left blank deliberately for IFPRI to complete, and the assets are "
+        f"unranked pending IFPRI's combined ranking."
     )
     W(f"")
     W(f"**Data**")
@@ -1487,7 +1507,7 @@ def build_report_body(assets, s, figures_prefix="figures"):
 #   - "Annex C" headings get {#annex-c}
 #   - inline "Section 6.2" / "Annex C" mentions become links to those ids
 # ---------------------------------------------------------------------------
-REPORT_VERSION = "1.1.0-draft"
+REPORT_VERSION = "1.2.0-draft"
 REPO_URL = "https://github.com/CGIAR-Climate-Data-Hub/cdh-asset-mapping"
 # Set this to the published Microsoft Form URL once created (see FEEDBACK.md).
 # When empty, the report falls back to the GitHub issue links only.
