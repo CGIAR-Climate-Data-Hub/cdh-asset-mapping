@@ -4704,7 +4704,7 @@
     "primary_contact": "Zhe Guo (Z.Guo@cgiar.org)",
     "contact_email": "z.guo@cgiar.org",
     "asset_organization": "IFPRI",
-    "primary_climate_inputs": null,
+    "primary_climate_inputs": "HadGEM GCM under RCP8.5; SSP2 socioeconomics (per 2022 GFPR Ch.14, doi:10.2499/9780896294257_14)",
     "climate_inputs_norm": [],
     "output_variable_type": "Population at risk of hunger (millions)",
     "user_groups": null,
