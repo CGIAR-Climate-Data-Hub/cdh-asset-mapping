@@ -1,6 +1,6 @@
 ---
 title: "CGIAR Climate Data Hub - System-Wide Climate Data Asset Mapping"
-subtitle: "Internal review draft"
+subtitle: "Technical report"
 date: today
 format:
   html:
@@ -242,7 +242,7 @@ init_notebook_mode(all_interactive=True)
 
 **Version `{python} REPORT_VERSION`** — `{python} stats["total"]` assets in this build. **Interactive data access:** [CDH interactive dashboard](https://cgiar-climate-data-hub.github.io/cdh-asset-mapping/#overview).
 
-*Changes in 1.2.0-draft:* IFPRI follow-up additions — adaptation-focused assets entering the catalogue as provisional and unranked pending IFPRI's combined ranking; descriptions AI-drafted and marked for IFPRI review.
+*IFPRI follow-up:* IFPRI follow-up additions — adaptation-focused assets entering the catalogue as provisional and unranked pending IFPRI's combined ranking; descriptions AI-drafted and marked for IFPRI review.
 
 > Generated programmatically from the data — no numbers are hand-typed. The figures and tables
 > below are interactive (hover, sort, filter) in this HTML edition. See **Data Access, Feedback
