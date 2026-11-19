@@ -1541,7 +1541,7 @@ def build_report_body(assets, s, figures_prefix="figures"):
 #   - "Annex C" headings get {#annex-c}
 #   - inline "Section 6.2" / "Annex C" mentions become links to those ids
 # ---------------------------------------------------------------------------
-REPORT_VERSION = "1.2.0-draft"
+REPORT_VERSION = "1.2.0"
 REPO_URL = "https://github.com/CGIAR-Climate-Data-Hub/cdh-asset-mapping"
 # Set this to the published Microsoft Form URL once created (see FEEDBACK.md).
 # When empty, the report falls back to the GitHub issue links only.
@@ -1601,7 +1601,7 @@ def build_markdown_report(assets, s, figures_prefix="figures"):
         "",
         f"**Version:** {REPORT_VERSION}  ",
         f"**Date:** {s['today']}  ",
-        "**Status:** Internal review draft",
+        "**Status:** Technical report",
         "",
         "---",
         "",
