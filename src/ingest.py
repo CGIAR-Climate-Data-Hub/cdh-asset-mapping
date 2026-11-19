@@ -836,6 +836,15 @@ def main():
                 applied += 1
         print(f"Applied {applied} contact-email overrides")
 
+    # Official landing pages verified after submission (issue #12).
+    source_links = {
+        ("IRRI", "RCMAS"): "https://rcm.da.gov.ph/",
+    }
+    for asset in all_assets:
+        link = source_links.get((asset["centre"], asset["name"]))
+        if link and not asset.get("url"):
+            asset["url"] = link
+
     # Write output
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(OUTPUT_PATH, "w") as f:
