@@ -27,33 +27,21 @@
     },
     {
       "match": ["Aynekulu, Ermias", "Ermias Aynekulu"],
-      "email": "e.aynekulu@cifor-icraf.org",
-      "confidence": "inferred",
-      "source": "Google Scholar verified cifor-icraf.org domain + CIFOR-ICRAF f.lastname pattern (alt: e.betemariam@cifor-icraf.org)"
-    },
-    {
-      "match": ["Henry Juarez"],
-      "email": "h.juarez@cgiar.org",
-      "confidence": "inferred",
-      "source": "Google Scholar verified cgiar.org (CIP) + CIP f.lastname@cgiar.org pattern"
+      "email": "e.betemariam@cgiar.org",
+      "confidence": "verified",
+      "source": "https://www.zef.de/fileadmin/user_upload/CV_Ermias_2023_01_01.pdf (2023 CV, ICRAF address)"
     },
     {
       "match": ["David Ramirez"],
       "email": "d.ramirez@cgiar.org",
-      "confidence": "inferred",
-      "source": "Google Scholar verified cgiar.org (CIP, David A. Ramirez Collantes) + CIP pattern"
-    },
-    {
-      "match": ["Xiaojing Wei"],
-      "email": "x.wei@cgiar.org",
-      "confidence": "inferred",
-      "source": "Alliance/CGIAR f.lastname@cgiar.org pattern; affiliation via Google Scholar/ResearchGate (alt: xiaojing.wei@cgiar.org)"
+      "confidence": "verified",
+      "source": "https://bigdata.cgiar.org/about-the-platform/team-members/ (CGIAR CIP focal point)"
     },
     {
       "match": ["Robert Hijmans"],
       "email": "rhijmans@ucdavis.edu",
-      "confidence": "inferred",
-      "source": "UC Davis faculty (external; terra/raster author) — public academic address"
+      "confidence": "verified",
+      "source": "https://ecology.ucdavis.edu/people (UC Davis directory)"
     }
   ]
 }
