@@ -3156,7 +3156,7 @@
     "primary_use_case": "Agronomic decision support and yield risk analysis",
     "justification": "Useful adaptation-oriented agronomic dataset, but geographically localized and commodity-specific.",
     "primary_contact": "Aynekulu, Ermias",
-    "contact_email": "e.aynekulu@cifor-icraf.org",
+    "contact_email": "e.betemariam@cgiar.org",
     "asset_organization": "ICRAF",
     "primary_climate_inputs": "Rainfall variability; drought and temperature conditions",
     "climate_inputs_norm": [],
@@ -3193,8 +3193,8 @@
     "rank_score": 0.143,
     "is_top3_in_centre": false,
     "priority_score": 56,
-    "contact_email_confidence": "inferred",
-    "contact_email_source": "Google Scholar verified cifor-icraf.org domain + CIFOR-ICRAF f.lastname pattern (alt: e.betemariam@cifor-icraf.org)"
+    "contact_email_confidence": "verified",
+    "contact_email_source": "https://www.zef.de/fileadmin/user_upload/CV_Ermias_2023_01_01.pdf (2023 CV, ICRAF address)"
   },
   {
     "centre": "CIFOR_ICRAF",
@@ -3224,7 +3224,7 @@
     "primary_use_case": "Restoration investment analysis and climate adaptation planning",
     "justification": "Strong restoration investment and adaptation planning relevance with transferable analytical framework.",
     "primary_contact": "Aynekulu, Ermias",
-    "contact_email": "e.aynekulu@cifor-icraf.org",
+    "contact_email": "e.betemariam@cgiar.org",
     "asset_organization": "ICRAF",
     "primary_climate_inputs": null,
     "climate_inputs_norm": [],
@@ -3261,8 +3261,8 @@
     "rank_score": 0.714,
     "is_top3_in_centre": false,
     "priority_score": 71,
-    "contact_email_confidence": "inferred",
-    "contact_email_source": "Google Scholar verified cifor-icraf.org domain + CIFOR-ICRAF f.lastname pattern (alt: e.betemariam@cifor-icraf.org)"
+    "contact_email_confidence": "verified",
+    "contact_email_source": "https://www.zef.de/fileadmin/user_upload/CV_Ermias_2023_01_01.pdf (2023 CV, ICRAF address)"
   },
   {
     "centre": "CIP",
@@ -3292,7 +3292,7 @@
     "primary_use_case": "Historical and spatial climate input for SIMCAST-Spatial / GeoSIMCAST, enabling national-scale late blight risk mapping and seasonal fungicide application pressure estimation for potato systems in Peru.",
     "justification": "Strong foundational national hydro-meteorological dataset for Peru. It remains highly relevant because it provides precipitation, temperature, evapotranspiration and dew point-related variables used in GeoSIMCAST and other climate-risk workflows. It should be retained as a high-priority asset, but ranked after ILCYM, Lateblight Advisor and SOLANUM in this submission.",
     "primary_contact": "Henry Juarez",
-    "contact_email": "h.juarez@cgiar.org",
+    "contact_email": null,
     "asset_organization": "SENAMHI",
     "primary_climate_inputs": "Rainfall/precipitation, Tmax, Tmin, dew point temperature, sunshine duration, wind speed, and derived relative humidity / vapor pressure variables. For GeoSIMCAST: rainfall, Tmax, Tmin, and Tdew.",
     "climate_inputs_norm": [],
@@ -3328,9 +3328,7 @@
     },
     "rank_score": 0.667,
     "is_top3_in_centre": false,
-    "priority_score": 78,
-    "contact_email_confidence": "inferred",
-    "contact_email_source": "Google Scholar verified cgiar.org (CIP) + CIP f.lastname@cgiar.org pattern"
+    "priority_score": 78
   },
   {
     "centre": "CIP",
@@ -3360,7 +3358,7 @@
     "primary_use_case": "Operational weather input service for SIMCAST / Lateblight Advisor, enabling real-time and forecast-driven potato late blight risk estimation and fungicide advisory generation.",
     "justification": "Operational supporting data service for real-time and forecast-based advisory workflows. It should be retained in the registry because it enables Lateblight Advisor to fetch location-specific weather inputs, but it is better treated as a supporting external dependency rather than a top strategic CIP asset.",
     "primary_contact": "Henry Juarez",
-    "contact_email": "h.juarez@cgiar.org",
+    "contact_email": null,
     "asset_organization": "WeatherAPI.com",
     "primary_climate_inputs": "Temperature, precipitation/rainfall, relative humidity, wind speed and direction, pressure, cloud cover, weather condition codes, visibility, UV, gusts, and optional variables such as air quality, pollen, solar irradiance, evapotranspiration, marine/tide data, and alerts depending on endpoint and subscription plan. For SIMCAST specifically, the most important inputs are temperature, rainfall/precipitation, and relative humidity.",
     "climate_inputs_norm": [],
@@ -3396,9 +3394,7 @@
     },
     "rank_score": 0.222,
     "is_top3_in_centre": false,
-    "priority_score": 68,
-    "contact_email_confidence": "inferred",
-    "contact_email_source": "Google Scholar verified cgiar.org (CIP) + CIP f.lastname@cgiar.org pattern"
+    "priority_score": 68
   },
   {
     "centre": "CIP",
@@ -3465,8 +3461,8 @@
     "rank_score": 0.444,
     "is_top3_in_centre": false,
     "priority_score": 72,
-    "contact_email_confidence": "inferred",
-    "contact_email_source": "UC Davis faculty (external; terra/raster author) \u2014 public academic address"
+    "contact_email_confidence": "verified",
+    "contact_email_source": "https://ecology.ucdavis.edu/people (UC Davis directory)"
   },
   {
     "centre": "CIP",
@@ -3496,7 +3492,7 @@
     "primary_use_case": "Historical observed weather dataset for CIP experimental stations, supporting potato and sweetpotato breeding programs, crop modeling, biodiversity modeling, crop suitability analysis, agroclimatic characterization, and validation of gridded climate products",
     "justification": "High-value institutional station dataset for CIP experimental environments. It is useful for crop modelling, breeding-site characterisation and validation of gridded climate products. It should be prioritised after the top four because additional harmonisation is needed before Hub-wide reuse.",
     "primary_contact": "Henry Juarez",
-    "contact_email": "h.juarez@cgiar.org",
+    "contact_email": null,
     "asset_organization": "International Potato Center (CIP)",
     "primary_climate_inputs": "Station-observed meteorological variables. Depending on station and dataset version, these may include precipitation, air temperature, relative humidity, solar radiation or sunshine/radiation-related variables, wind speed, evapotranspiration-related variables, and other standard station weather variables. Exact variable availability should be preserved per DOI and station.",
     "climate_inputs_norm": [
@@ -3534,9 +3530,7 @@
     },
     "rank_score": 0.556,
     "is_top3_in_centre": false,
-    "priority_score": 51,
-    "contact_email_confidence": "inferred",
-    "contact_email_source": "Google Scholar verified cgiar.org (CIP) + CIP f.lastname@cgiar.org pattern"
+    "priority_score": 51
   },
   {
     "centre": "CIP",
@@ -3636,7 +3630,7 @@
     "primary_use_case": "Weather-driven decision support for potato late blight management, generating cultivar-specific fungicide timing recommendations based on observed and forecast weather risk",
     "justification": "Lateblight Advisor / SIMCAST is a top strategic Climate Data Hub candidate because it directly connects climate data to real-world advisory decisions for potato late blight management. The platform converts observed and forecast weather into cultivar-specific fungicide timing recommendations, helping reduce unnecessary applications while maintaining disease control. It is highly decision-relevant because it is designed for advisory delivery, farmer-facing use and extension support, and the scaling work documents training, user feedback, technical modernization and field demonstration trials. Its technical readiness is strong: the tool has moved to a Python-based implementation, integrates real-time weather data, exposes standardized model outputs through a SIMCAST MCP layer, and links to GeoSIMCAST for spatial risk mapping. Its main limitations are dependence on weather data quality, cultivar resistance metadata, local validation and user training. Overall, it is one of CIP\u2019s clearest examples of climate-informed digital advisory infrastructure and should be prioritised for early Climate Data Hub visibility and federation.",
     "primary_contact": "Henry Juarez",
-    "contact_email": "h.juarez@cgiar.org",
+    "contact_email": null,
     "asset_organization": "International Potato Center (CIP)",
     "primary_climate_inputs": "Temperature, relative humidity, rainfall/precipitation, observed weather, forecast weather, and derived humidity variables. In GeoSIMCAST: Tmax, Tmin, dew point temperature, and rainfall",
     "climate_inputs_norm": [
@@ -3674,9 +3668,7 @@
     },
     "rank_score": 0.889,
     "is_top3_in_centre": true,
-    "priority_score": 82,
-    "contact_email_confidence": "inferred",
-    "contact_email_source": "Google Scholar verified cgiar.org (CIP) + CIP f.lastname@cgiar.org pattern"
+    "priority_score": 82
   },
   {
     "centre": "CIP",
@@ -3743,8 +3735,8 @@
     "rank_score": 0.778,
     "is_top3_in_centre": true,
     "priority_score": 74,
-    "contact_email_confidence": "inferred",
-    "contact_email_source": "Google Scholar verified cgiar.org (CIP, David A. Ramirez Collantes) + CIP pattern"
+    "contact_email_confidence": "verified",
+    "contact_email_source": "https://bigdata.cgiar.org/about-the-platform/team-members/ (CGIAR CIP focal point)"
   },
   {
     "centre": "CIP",
@@ -3811,8 +3803,8 @@
     "rank_score": 0.333,
     "is_top3_in_centre": false,
     "priority_score": 65,
-    "contact_email_confidence": "inferred",
-    "contact_email_source": "Google Scholar verified cgiar.org (CIP, David A. Ramirez Collantes) + CIP pattern"
+    "contact_email_confidence": "verified",
+    "contact_email_source": "https://bigdata.cgiar.org/about-the-platform/team-members/ (CGIAR CIP focal point)"
   },
   {
     "centre": "CIP",
@@ -3879,8 +3871,8 @@
     "rank_score": 0.111,
     "is_top3_in_centre": false,
     "priority_score": 56,
-    "contact_email_confidence": "inferred",
-    "contact_email_source": "Google Scholar verified cgiar.org (CIP, David A. Ramirez Collantes) + CIP pattern"
+    "contact_email_confidence": "verified",
+    "contact_email_source": "https://bigdata.cgiar.org/about-the-platform/team-members/ (CGIAR CIP focal point)"
   },
   {
     "centre": "ICRISAT",
