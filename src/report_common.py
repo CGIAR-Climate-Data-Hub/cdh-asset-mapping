@@ -19,6 +19,11 @@ HUB_FUNDED = {"Alliance", "IITA", "ILRI", "IFPRI", "IWMI", "WorldFish"}
 NOMINATOR_DISPLAY_OVERRIDES = {
     "a.urfels@cgiar.org": "Anton Urfels",
 }
+ACKNOWLEDGMENT_NAME_OVERRIDES = {
+    "Winowiecki, Leigh Ann": "Leigh Ann Winowiecki",
+    "Winowiecki, Leigh Ann (ICRAF)": "Leigh Ann Winowiecki",
+    "McGrath, Steve P (Rothamsted Research)": "Steve P. McGrath (Rothamsted Research)",
+}
 ACKNOWLEDGMENT_CONTRIBUTOR_OVERRIDES = {
     "CIFOR_ICRAF": {"Sufiet Erlita"},
     "ICRISAT": {"Mamta Sharma", "Raman Babu"},
@@ -51,6 +56,28 @@ def display_nominator(raw, fallback="Unattributed"):
     if not first:
         return fallback
     return NOMINATOR_DISPLAY_OVERRIDES.get(first, first)
+
+
+def acknowledgment_names(raw):
+    """Return every recorded nominator for contributor credits."""
+    for line in (raw or "").splitlines():
+        name = line.strip().rstrip(",")
+        if name:
+            yield ACKNOWLEDGMENT_NAME_OVERRIDES.get(
+                name, NOMINATOR_DISPLAY_OVERRIDES.get(name, name)
+            )
+
+
+def acknowledgment_contributors(assets):
+    contributors = {}
+    for asset in assets:
+        contributors.setdefault(asset["centre"], set()).update(
+            acknowledgment_names(asset.get("nominator"))
+        )
+    for groups in (ACKNOWLEDGMENT_CONTRIBUTOR_OVERRIDES, ACKNOWLEDGMENT_COORDINATORS):
+        for centre, people in groups.items():
+            contributors.setdefault(centre, set()).update(people)
+    return contributors
 
 
 def format_ack_contributor(centre, name):
@@ -1265,15 +1292,15 @@ def build_report_body(assets, s, figures_prefix="figures"):
         f"particular to the centre focal points and nominators listed below."
     )
     W(f"")
-    noms = {}
-    for a in assets:
-        nm = a.get("nominator")
-        if nm:
-            first = display_nominator(nm, fallback="")
-            if first:
-                noms.setdefault(a["centre"], set()).add(first)
-    for centre, people in ACKNOWLEDGMENT_CONTRIBUTOR_OVERRIDES.items():
-        noms.setdefault(centre, set()).update(people)
+    noms = acknowledgment_contributors(assets)
+    W(
+        "Peter R. Steward (Alliance of Bioversity International and CIAT) compiled the "
+        "inventory and developed the report and supporting workflow. Brayden Youngberg "
+        "(Alliance of Bioversity International and CIAT) and Michelle Tigchelaar "
+        "(Stanford University) reviewed the report. Alcade Segnon, Franck Tonle and "
+        "Robert Zougmore (Alliance of Bioversity International and CIAT) reviewed the dashboard."
+    )
+    W(f"")
     W(f"*Coordinator names are shown in bold in the table below.*")
     W(f"")
     W(f"::: {{.ack-table}}")
@@ -1291,6 +1318,13 @@ def build_report_body(assets, s, figures_prefix="figures"):
         f"*IRRI note:* Emma Quicho-Diangkinay coordinated the IRRI submission. The current "
         f"submission records list Anton Urfels as nominator on the catalogued items, but broader "
         f"IRRI contributor attribution is being checked and may be updated after review."
+    )
+    W(f"")
+    W(
+        "Michelle Tigchelaar is credited under WorldFish for the submission and under "
+        "Stanford University for her report review. Steve P. McGrath is credited for "
+        "a joint nomination recorded in the CIFOR-ICRAF submission and is affiliated "
+        "with Rothamsted Research."
     )
     W(f"")
     W(
